@@ -8,8 +8,9 @@
       "installOhMyZsh": true,
       "upgradePackages": true
     },
-    "./features/gascity": {
-      "autoRegister": true
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24",
+      "installGlibc": true
     },
     "./features/devin": {
       "version": "latest"
@@ -31,5 +32,6 @@
     "TERM": "xterm-256color"
   },
   "remoteUser": "vscode",
-  "runArgs": ["--tty"]
+  "runArgs": ["--tty"],
+  "postCreateCommand": "curl -fsSL https://bun.sh/install | bash && echo 'export BUN_INSTALL=\"$HOME/.bun\"' >> ~/.bashrc && echo 'export PATH=\"$BUN_INSTALL/bin:$PATH\"' >> ~/.bashrc"
 }
