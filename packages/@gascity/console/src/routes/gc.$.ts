@@ -31,15 +31,17 @@ function authHeaders(incomingToken?: string): Record<string, string> {
 async function proxy(request: Request, splat: string | undefined) {
   const incoming = new URL(request.url);
   
-  // Validate splat parameter to prevent SSRF attacks
-  if (splat && !/^[a-zA-Z0-9/_-]*$/.test(splat)) {
+  const target = baseUrl() + "/" + (splat ?? "") + incoming.search;
+  
+  // Validate target URL to prevent SSRF attacks
+  const targetUrl = new URL(target);
+  const baseUrlUrl = new URL(baseUrl());
+  if (targetUrl.origin !== baseUrlUrl.origin) {
     return new Response(
-      JSON.stringify({ error: "Invalid request path" }),
+      JSON.stringify({ error: "Invalid request target" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-  
-  const target = baseUrl() + "/" + (splat ?? "") + incoming.search;
 
   const incomingAuth = request.headers.get("authorization");
   const incomingToken = incomingAuth?.replace(/^Bearer\s+/i, "");

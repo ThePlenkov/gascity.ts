@@ -1021,8 +1021,7 @@ function parseSlingOutput(stdout: string, stderr: string): SlingParseResult {
     /^\s*Slung\s+(\S+)/m, // NOSONAR: simple regex, acceptable performance
     /^\s*Started workflow\s+(\S+)/m, // NOSONAR: simple regex, acceptable performance
     /^\s*Attached wisp\s+(\S+)/m, // NOSONAR: simple regex, acceptable performance
-    /\b(gd-[a-z0-9]+)\b/i, // NOSONAR: match() is appropriate here
-    /\b(bd-[a-z0-9]+)\b/i, // NOSONAR: match() is appropriate here
+    /\b([A-Z0-9-]+-[a-z0-9]+)\b/i, // NOSONAR: match() is appropriate here - generic prefix pattern
   ]
   for (const re of patterns) {
     const m = stdout.match(re) || stderr.match(re) // NOSONAR: match() uses exec() internally

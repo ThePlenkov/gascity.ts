@@ -74,9 +74,17 @@ function OrdersPage() {
               {(data ?? []).map((o) => {
                 const active = selected === o.name;
                 return (
-                  <button
+                  <div
                     key={o.name}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelected(o.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelected(o.name);
+                      }
+                    }}
                     className={clsx(
                       "grid cursor-pointer grid-cols-[1fr_70px_80px_90px_auto] items-center gap-3 border-b border-border px-6 py-2.5 w-full text-left",
                       active ? "bg-muted" : "hover:bg-muted/40",
@@ -134,7 +142,7 @@ function OrdersPage() {
                         fire
                       </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </ul>

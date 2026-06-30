@@ -215,12 +215,11 @@ function InitCityDialog({
       tabIndex={0}
       aria-label="Close dialog"
     >
-      <button
-        type="button"
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
-        role="dialog" // NOSONAR: using button with role is acceptable for React
+        role="dialog"
         aria-modal="true"
+        className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <span className="font-mono text-xs text-foreground">new city</span>
@@ -321,7 +320,7 @@ function InitCityDialog({
             {initMut.isPending ? "creating…" : "gc init + import"}
           </button>
         </div>
-      </button>
+      </div>
     </div>
   );
 }
