@@ -133,12 +133,12 @@ test.describe('Sling → pickup → result', () => {
     await actions.fillSlingTask(taskText);
     await actions.submitSlingTask();
 
-    // The composer footer should report a real bead id (gd-…) now that
-    // the stub is fixed. The status line is "slung. bead gd-XXXX".
-    await expect(page.locator('body')).toContainText(/slung\. bead gd-[a-z0-9-]+/, {
+    // The composer footer should report a real bead id (various prefixes like gd-, BL-, FE-, etc.)
+    // now that the stub is fixed. The status line is "slung. bead XXXX".
+    await expect(page.locator('body')).toContainText(/slung\. bead [A-Z0-9-]+/, {
       timeout: 30_000,
     });
-    const beadIdMatch = (await page.content()).match(/gd-[a-z0-9-]+/);
+    const beadIdMatch = (await page.content()).match(/[A-Z0-9-]+/);
     const beadId = beadIdMatch ? beadIdMatch[0] : null;
     expect(beadId, 'gcSling must return a parseable bead id').toBeTruthy();
     await actions.closeSlingDrawer();

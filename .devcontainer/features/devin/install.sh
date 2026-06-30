@@ -8,9 +8,9 @@ INSTALL_METHOD=${INSTALLMETHOD:-"script"}
 
 echo "Installing Devin CLI (method: ${INSTALL_METHOD}, version: ${VERSION})..."
 
-# Install curl if not available
-if ! command -v curl &> /dev/null; then
-    apt-get update -y && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install curl and jq if not available
+if ! command -v curl &> /dev/null || ! command -v jq &> /dev/null; then
+    apt-get update -y && apt-get install -y curl jq && rm -rf /var/lib/apt/lists/*
 fi
 
 # Ensure devin --version failures (warnings, missing creds, etc.) never abort
@@ -53,20 +53,10 @@ run_upstream_script() {
     return $rc
 }
 
-# Extract a string field for $TARGET from the manifest JSON. Prefers jq when
-# available (robust against pretty-printing / whitespace); falls back to a
-# grep/sed scan for minimal base images that don't ship jq.
+# Extract a string field for $TARGET from the manifest JSON using jq.
 manifest_field() {
     local manifest="$1" target="$2" field="$3"
-    if command -v jq >/dev/null 2>&1; then
-        printf '%s' "$manifest" | jq -r --arg t "$target" --arg f "$field" \
-            '.platforms[$t][$f] // empty'
-    else
-        printf '%s' "$manifest" \
-            | grep -o "\"$target\"[[:space:]]*:[[:space:]]*{[^}]*}" \
-            | grep -o "\"$field\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" \
-            | sed "s/.*\"\\([^\"]*\\)\"$/\\1/"
-    fi
+    printf '%s' "$manifest" | jq -r --arg t "$target" --arg f "$field" '.platforms[$t][$f] // empty'
 }
 
 case "$INSTALL_METHOD" in

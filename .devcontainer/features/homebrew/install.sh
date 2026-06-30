@@ -53,18 +53,15 @@ if [[ -n "$PACKAGES_LIST" ]]; then
         # Check multiple possible locations for the binary
         BINARY_LOCATIONS=(
             "/home/linuxbrew/.linuxbrew/bin/$package_name"
-            "/home/linuxbrew/.linuxbrew/Cellar/$package_name/*/bin/$package_name"
+            "/home/linuxbrew/.linuxbrew/opt/$package_name/bin/$package_name"
         )
 
         for binary_path in "${BINARY_LOCATIONS[@]}"; do
-            # Expand glob patterns
-            for expanded_path in $binary_path; do
-                if [[ -f "$expanded_path" ]] && [[ ! -f "/usr/local/bin/$package_name" ]]; then
-                    echo "Creating symlink for $package_name in /usr/local/bin..."
-                    ln -sf "$expanded_path" "/usr/local/bin/$package_name"
-                    break 2  # Break both loops once symlink is created
-                fi
-            done
+            if [[ -f "$binary_path" ]] && [[ ! -f "/usr/local/bin/$package_name" ]]; then
+                echo "Creating symlink for $package_name in /usr/local/bin..."
+                ln -sf "$binary_path" "/usr/local/bin/$package_name"
+                break  # Break once symlink is created
+            fi
         done
     done
 fi

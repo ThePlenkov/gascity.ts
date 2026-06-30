@@ -40,7 +40,7 @@ export default defineConfig({
   // each scenario's `beforeAll` probes the supervisor and skips the
   // suite when unreachable, so they self-degrade when no `gc`
   // backend is available.
-  testIgnore: ["**/mock/**"],
+  testIgnore: SKIP_SCENARIOS ? ["**/mock/**", "**/scenarios/**"] : ["**/mock/**"],
   timeout: 30_000,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,

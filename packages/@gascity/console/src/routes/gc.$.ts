@@ -30,6 +30,15 @@ function authHeaders(incomingToken?: string): Record<string, string> {
 
 async function proxy(request: Request, splat: string | undefined) {
   const incoming = new URL(request.url);
+  
+  // Validate splat parameter to prevent SSRF attacks
+  if (splat && !/^[a-zA-Z0-9/_-]*$/.test(splat)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid request path" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  
   const target = baseUrl() + "/" + (splat ?? "") + incoming.search;
 
   const incomingAuth = request.headers.get("authorization");

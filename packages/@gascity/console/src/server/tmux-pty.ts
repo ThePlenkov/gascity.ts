@@ -87,7 +87,7 @@ const SAFE_ENV: Record<string, string> = {
   LANG: process.env.LANG ?? "C.UTF-8",
   LC_ALL: process.env.LC_ALL ?? "C.UTF-8",
   // tmux uses these to render — see `man tmux`.
-  TMUX_TMPDIR: process.env.TMUX_TMPDIR ?? "",
+  ...(process.env.TMUX_TMPDIR ? { TMUX_TMPDIR: process.env.TMUX_TMPDIR } : {}),
   USER: process.env.USER ?? "",
   SHELL: process.env.SHELL ?? "/bin/sh",
 };

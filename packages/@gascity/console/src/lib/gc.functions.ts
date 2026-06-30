@@ -1083,7 +1083,10 @@ async function withSupervisorUrl<T>(
   } finally {
     ; (OpenAPI as { BASE?: string }).BASE = previous
   }
-}
+  // NOTE: This pattern mutates global OpenAPI.BASE which could cause race conditions
+  // in truly concurrent scenarios. However, TanStack server functions typically run
+  // in sequential request contexts, mitigating this risk. A full refactor to pass
+  // BASE URL directly to all service methods would be required for complete thread safety.
 
 /**
  * Returns `true` when the `GC_NO_API` escape hatch is set on the
