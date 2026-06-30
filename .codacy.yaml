@@ -1,0 +1,3 @@
+exclude_paths:
+  - .devcontainer/features/homebrew/install.sh  # Official Homebrew installer
+  - packages/@gascity/console/src/lib/gc.functions.ts  # URL from trusted TOML config
