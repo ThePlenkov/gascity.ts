@@ -170,6 +170,8 @@ export async function attachTmuxPty(
  * protocol: control JSON is sent as text; keystrokes are text; binary frames
  * are treated as utf8 keystrokes for compatibility with `xterm.js`'s
  * `binaryType = "arraybuffer"` mode.
+ *
+ * The ws library may deliver fragmented binary messages as Buffer[] arrays.
  */
 export function handleBrowserMessage(pty: IPty, raw: unknown): void {
   if (typeof raw === "string") {
@@ -183,6 +185,14 @@ export function handleBrowserMessage(pty: IPty, raw: unknown): void {
   }
   if (raw instanceof ArrayBuffer) {
     pty.write(Buffer.from(raw).toString("utf8"));
+    return;
+  }
+  // Handle fragmented binary messages (Buffer[] from ws library)
+  if (Array.isArray(raw)) {
+    const concatenated = Buffer.concat(raw.map((item) => 
+      Buffer.isBuffer(item) ? item : Buffer.from(String(item))
+    ));
+    pty.write(concatenated.toString("utf8"));
   }
 }
 

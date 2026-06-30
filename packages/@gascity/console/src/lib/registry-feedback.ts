@@ -64,7 +64,7 @@ function summariseRefresh(obj: JsonObject, raw: string): string | null {
   const target = asString(obj.target)
 
   const pieces: string[] = []
-  const scope = getRefreshScope(refreshedCount, target)
+  const scope = getRefreshScope(refreshedCount, target || null)
   pieces.push(getRefreshMessage(refreshedCount, scope, totalPacks))
   addFailureMessage(pieces, failureCount)
   addPrunedMessage(pieces, pruned)
