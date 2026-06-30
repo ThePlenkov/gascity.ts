@@ -261,7 +261,8 @@ export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
   let bestKey: number[] | null = null
   let bestIsPrerelease = false
   for (const r of pack.releases) {
-    const isPrerelease = r.version.includes('-') || r.version.includes('+')
+    // In SemVer, only `-` indicates prerelease. `+` denotes build metadata.
+    const isPrerelease = r.version.includes('-')
     const key = r.version
       .split(/[.\-+]/)
       .map((seg) => {

@@ -219,6 +219,7 @@ function InitCityDialog({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-label="new city dialog"
         // TODO: Add focus trap and background inerting for full keyboard accessibility
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
       >
