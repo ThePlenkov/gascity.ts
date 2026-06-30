@@ -85,8 +85,8 @@ test.describe('Sling Drawer Diagnostics', () => {
     await page.screenshot({ path: '/tmp/sling-drawer-diagnostic.png' });
     console.log('Screenshot saved to /tmp/sling-drawer-diagnostic.png');
 
-    // Add assertion to satisfy SonarQube
-    expect(drawerContent.length).toBeGreaterThan(0);
+    // Assert drawer contains expected diagnostic content
+    expect(drawerContent.toLowerCase()).toMatch(/diagnostic|error|warning|info/);
 
     // Close drawer
     await actions.closeSlingDrawer();

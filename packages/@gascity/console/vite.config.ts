@@ -19,9 +19,10 @@ const stripSplitHmrBookkeeping = () => ({
     if (!id.includes('/routes/')) return null
     let out = code
     // Drop the HMR `import.meta.hot.data["..."] = TSRSplitComponent` line.
+    // Match the specific pattern to avoid removing non-HMR code.
     const lines = out.split('\n')
     out = lines
-      .filter(line => !line.includes('TSRSplitComponent'))
+      .filter(line => !line.match(/import\.meta\.hot\.data\[.*\]\s*=\s*TSRSplitComponent/))
       .join('\n')
     return out === code ? null : { code: out, map: null }
   },

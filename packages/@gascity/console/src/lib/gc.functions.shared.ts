@@ -1,5 +1,10 @@
 /**
  * Shared utilities and constants for GC server functions.
+ *
+ * WARNING: This module is Node-only and contains module-level side effects
+ * (configureGasCityClient). Do not import this in browser/client code.
+ * Importing this in browser code will cause runtime errors due to the
+ * module-level API client configuration.
  */
 
 import { configureGasCityClient } from '@gascity/client'

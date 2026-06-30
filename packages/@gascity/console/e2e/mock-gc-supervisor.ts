@@ -319,6 +319,11 @@ async function handleSupervisorRestart(req: IncomingMessage, res: ServerResponse
     state.city.phase = 'stopped'
     resetCityState()
     recordEvent('supervisor.stopped', {})
+    // NOTE: This setTimeout callback mutates global state without capturing
+    // request-time state. If __reset fires during the 50ms gap, it can
+    // cause inter-test state contamination. This is a known limitation
+    // of the mock server; tests should allow sufficient time between
+    // restart operations and __reset calls.
     setTimeout(() => {
         state.supervisorUp = true
         recordEvent('supervisor.started', { version: SUPERVISOR_VERSION })

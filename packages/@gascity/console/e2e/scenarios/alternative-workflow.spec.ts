@@ -140,7 +140,7 @@ test.describe('Alternative E2E Workflow', () => {
     }
 
     // Assert that supervisor panel loaded successfully
-    expect(pageContent.length).toBeGreaterThan(0);
+    expect(pageContent.toLowerCase()).toMatch(/operational|starting|stopping|down|supervisor/);
 
     // Close supervisor panel
     await actions.closeSupervisorPanel();

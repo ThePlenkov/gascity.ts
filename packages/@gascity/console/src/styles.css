@@ -124,13 +124,6 @@
 .xterm-viewport { background: transparent !important; }
 .xterm .xterm-screen { padding: 12px; }
 
-@layer components {
-  .live-dot {
-    @apply inline-block h-1.5 w-1.5 rounded-full bg-emerald-500;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
-  }
-}
-
 /* xterm overrides — match console background and palette */
 .xterm,
 .xterm-viewport,
