@@ -251,21 +251,41 @@ function validateDocument(doc: RegistryDocument): void {
  * Lexicographic compare is intentionally NOT used — `0.1.10 < 0.1.2`
  * under `String#localeCompare`. We split on `.`, parse each segment
  * as an integer (falling back to 0), and compare tuple-wise.
+ *
+ * Stable releases (no prerelease identifier) are always preferred
+ * over prereleases (e.g., `1.0.0` > `1.0.0-alpha`).
  */
 export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
   if (pack.releases.length === 0) return undefined
   let best: RegistryRelease | null = null
   let bestKey: number[] | null = null
+  let bestIsPrerelease = false
   for (const r of pack.releases) {
+    const isPrerelease = r.version.includes('-') || r.version.includes('+')
     const key = r.version
       .split(/[.\-+]/)
       .map((seg) => {
         const n = Number(seg)
         return Number.isFinite(n) ? n : 0
       })
-    if (bestKey === null || compareTuple(key, bestKey) > 0) {
+    // Prefer stable releases over prereleases
+    if (bestKey === null) {
       best = r
       bestKey = key
+      bestIsPrerelease = isPrerelease
+    } else if (!bestIsPrerelease && isPrerelease) {
+      // Current best is stable, current is prerelease - keep best
+      continue
+    } else if (bestIsPrerelease && !isPrerelease) {
+      // Current best is prerelease, current is stable - upgrade
+      best = r
+      bestKey = key
+      bestIsPrerelease = isPrerelease
+    } else if (compareTuple(key, bestKey) > 0) {
+      // Both are same type (both stable or both prerelease) - compare numerically
+      best = r
+      bestKey = key
+      bestIsPrerelease = isPrerelease
     }
   }
   return best ?? undefined

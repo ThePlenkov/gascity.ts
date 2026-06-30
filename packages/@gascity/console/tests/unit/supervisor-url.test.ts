@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -226,7 +226,6 @@ port = 9443
 log_level = "info"
 `
             writeFileSync(join(workdir, 'supervisor.toml'), toml)
-            const { readFileSync } = require('node:fs') as typeof import('node:fs')
             const text = readFileSync(join(workdir, 'supervisor.toml'), 'utf8')
             const parsed = _parseSupervisorTomlForTest(text)
             const url = _buildSupervisorUrlFromTomlForTest(parsed.bind, parsed.port)

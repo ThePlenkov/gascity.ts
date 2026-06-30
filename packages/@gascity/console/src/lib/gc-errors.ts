@@ -25,8 +25,6 @@ const SILENT_NET_CODES = new Set([
     'EHOSTUNREACH',
     'ENETUNREACH',
     'EPIPE',
-    'ERR_CANCELED',
-    'ABORTED',
 ])
 
 /**

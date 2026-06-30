@@ -30,9 +30,7 @@ test.describe('Formulas Tests', () => {
     // Formulas are rendered as `<Link to="/formulas/$name">` so the href
     // pattern is stable: target links that start with `/formulas/` and
     // have a name suffix (i.e. not just the index page itself).
-    const detailLinks = page.locator('a[href^="/formulas/"]').filter({
-      hasNot: page.locator('text=formulas'),
-    });
+    const detailLinks = page.locator('a[href^="/formulas/"][href!="/formulas/"]');
     const count = await detailLinks.count();
 
     if (count > 0) {

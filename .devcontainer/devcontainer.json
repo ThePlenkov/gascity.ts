@@ -29,7 +29,15 @@
       "extensions": [
         "github.copilot",
         "ms-vscode.vscode-typescript-next"
-      ]
+      ],
+      "settings": {
+        "mcp.servers": {
+          "lovable": {
+            "type": "http",
+            "url": "https://mcp.lovable.dev"
+          }
+        }
+      }
     }
   },
   "containerEnv": {

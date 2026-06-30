@@ -87,7 +87,7 @@ This feature installs the following system packages required by Playwright:
 - **Graphics libraries**: libxcomposite1, libxdamage1, libxfixes3, libxrandr2, libgbm1, libasound2
 - **Accessibility**: libatspi2.0-0
 - **Rendering**: libpango-1.0-0, libcairo2, libgtk-3-0, libgdk-pixbuf2.0-0
-- **X11 libraries**: libxshmfence1, libgl1, libglib2.0-0, libfontconfig1, libfreetype6, libx11-6, libxcb-*
+- **X11 libraries**: libxshmfence1, libgl1, libglib2.0-0, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxext6, libxrender1
 - **Fonts**: fonts-liberation
 - **Additional**: libu2f-udev, libvulkan1, xvfb
 

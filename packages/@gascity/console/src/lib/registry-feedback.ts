@@ -126,8 +126,8 @@ function summariseRemove(obj: JsonObject, raw: string): string | null {
   if (obj.ok === false) return null
   const name = asString(obj.name)
   if (!name) return null
-  if (obj.removed === false) return `registry "${name}" not removed`
-  return `registry "${name}" removed`
+  if (obj.removed === true) return `registry "${name}" removed`
+  return `registry "${name}" not removed`
 }
 
 /**

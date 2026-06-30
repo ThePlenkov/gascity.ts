@@ -115,7 +115,8 @@ export function tmuxWebSocketPlugin(): Plugin {
       httpServer.on("upgrade", (req, socket, head) => {
         // URL parse is cheap; we only upgrade our path.
         const url = req.url ?? "";
-        if (!url.startsWith(PTY_PATH)) return;
+        // Match exactly /api/pty or /api/pty? (with query string), not /api/ptyfoo or /api/pty/evil
+        if (url !== PTY_PATH && !url.startsWith(PTY_PATH + "?")) return;
         // Disallow ?probe= upgrades; that's an HTTP probe path.
         if (url.startsWith(PROBE_PATH)) {
           socket.destroy();
