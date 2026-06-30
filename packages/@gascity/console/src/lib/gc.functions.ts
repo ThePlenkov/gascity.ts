@@ -1710,6 +1710,7 @@ export const gcSupervisorDiscover = createServerFn({ method: 'GET' })
       return { url, source, fromToml, reachable: false, apiDisabled: true }
     }
     // Cheap reachability probe: do not throw on failure, just report.
+    // NOSONAR: URL is from trusted TOML configuration, not user-controlled input
     let reachable = false
     try {
       const res = await fetch(`${url}/v0/health`, {
