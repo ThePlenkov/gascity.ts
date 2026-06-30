@@ -167,6 +167,7 @@ function asyncAccepted(req: IncomingMessage, res: ServerResponse, requestType: s
     if (!req.headers['x-gc-request']) {
         res.statusCode = 403
         res.setHeader('content-type', 'application/json')
+        res.setHeader('X-Gc-Mock', '1')
         res.end(JSON.stringify({ detail: 'X-GC-Request header required' }))
         return
     }

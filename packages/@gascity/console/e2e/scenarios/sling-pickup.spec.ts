@@ -39,11 +39,8 @@ import { E2EActions, isGcBackendReachable } from '../lib/actions';
 test.describe('Sling → pickup → result', () => {
   let actions: E2EActions;
   const runId = randomUUID().slice(0, 8);
-  // The dev supervisor already has `gc-e2e-26519812` running under
-  // `/tmp/gc-e2e-26519812` — it was provisioned by a previous e2e
-  // run before the dolt-state allocate-port provisioner became
-  // hung. We reuse that city for sling assertions because spinning
-  // up a fresh city in this devcontainer would require a working
+  // This test uses a fresh test city under `/tmp/gc-fresh-test` for sling assertions.
+  // Spinning up a fresh city in this devcontainer would require a working
   // Dolt per-city stack that isn't available in this image.
   // Operator workflow in a properly provisioned environment would
   // call `gc init` + `gc start` to bootstrap a fresh city per run

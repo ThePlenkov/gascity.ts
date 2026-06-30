@@ -204,7 +204,7 @@ test.describe('Task Processing Automation', () => {
       const beads = await actions.getBeadList('all');
       console.log(`Beads after formula run: ${beads.length}`);
 
-      // Assert that we found formulas or beads
+      // Assert that formulas were found
       expect(formulas.length).toBeGreaterThan(0);
     } else {
       console.log('No formulas available to test');
@@ -233,7 +233,7 @@ test.describe('Task Processing Automation', () => {
       const beads = await actions.getBeadList('all');
       console.log(`Beads after order fire: ${beads.length}`);
 
-      // Assert that we either have orders or beads
+      // Assert that orders were created
       expect(orders.length).toBeGreaterThan(0);
     } else {
       console.log('No orders available to test');

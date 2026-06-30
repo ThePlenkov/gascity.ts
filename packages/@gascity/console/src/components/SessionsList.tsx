@@ -8,6 +8,7 @@ import {
   gcSessionNudge,
   gcSessionReset,
   gcTmuxStatus,
+  type TmuxProviderStatus,
 } from "@/lib/gc.functions";
 
 function relTime(iso?: string) {
@@ -36,12 +37,7 @@ export function SessionsList() {
 
   const { data: tmux } = useQuery({
     queryKey: ["gc", "tmux-status"],
-    queryFn: () => tmuxStatusFn() as Promise<{
-      available: boolean
-      tmuxBin: string
-      version?: string
-      error?: string
-    }>,
+    queryFn: () => tmuxStatusFn() as Promise<TmuxProviderStatus>,
     refetchInterval: 10_000,
   });
 

@@ -35,12 +35,16 @@ const SILENT_NET_CODES = new Set([
  * Recurses into `cause` because axios nests the underlying network error
  * under the top-level request error.
  */
-export function silentIfOffline(error: unknown): boolean {
+export function silentIfOffline(error: unknown, visited = new WeakSet<unknown>()): boolean {
     if (!error || typeof error !== 'object') return false
+    // Prevent infinite recursion on circular cause chains
+    if (visited.has(error)) return false
+    visited.add(error)
+
     const code = (error as { code?: unknown }).code
     if (typeof code === 'string' && SILENT_NET_CODES.has(code)) return true
     const cause = (error as { cause?: unknown }).cause
-    if (cause && cause !== error) return silentIfOffline(cause)
+    if (cause && cause !== error) return silentIfOffline(cause, visited)
     return false
 }
 
