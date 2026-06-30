@@ -2322,10 +2322,11 @@ function readmeUrlFor(source: string, ref: string | undefined, name: string): st
   const repo = ghMatch[2].replace(/\.git$/, '')
   const subpath = ghMatch[4] ?? name
   // If the source is already in `tree/<ref>/<path>` form, prefer
-  // that exact ref; otherwise use the provided ref or `main`.
+  // that exact ref; otherwise use the provided ref.
   const treeMatch = subpath.match(/^tree\/([^/]+)\/(.+)$/) // NOSONAR: match() is appropriate here
-  const branch = treeMatch?.[1] ?? ref ?? 'main'
+  const branch = treeMatch?.[1] ?? ref
   const path = treeMatch?.[2] ?? subpath
+  if (!branch) return source
   return `https://github.com/${owner}/${repo}/tree/${branch}/${path}`
 }
 
