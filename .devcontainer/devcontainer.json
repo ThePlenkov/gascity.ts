@@ -15,9 +15,6 @@
     "./features/devin": {
       "version": "latest"
     },
-    "./features/cursor": {
-      "version": "latest"
-    },
     "./features/kilo": {},
     "./features/playwright": {
       "browsers": "chromium",
