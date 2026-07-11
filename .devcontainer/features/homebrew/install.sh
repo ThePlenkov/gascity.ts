@@ -38,9 +38,9 @@ PACKAGES_LIST=$(echo "$PACKAGES" | sed 's/\[//g' | sed 's/\]//g' | sed 's/,/ /g'
 if [[ -n "$PACKAGES_LIST" ]]; then
     echo "Installing packages: $PACKAGES_LIST"
     if [[ "$(id -u)" = "0" ]]; then
-        sudo -u vscode /home/linuxbrew/.linuxbrew/bin/brew install $PACKAGES_LIST
+        sudo -u vscode /home/linuxbrew/.linuxbrew/bin/brew install $PACKAGES_LIST || sudo -u vscode /home/linuxbrew/.linuxbrew/bin/brew upgrade $PACKAGES_LIST
     else
-        brew install $PACKAGES_LIST
+        brew install $PACKAGES_LIST || brew upgrade $PACKAGES_LIST
     fi
 
     echo "Packages installed successfully!"
@@ -53,15 +53,18 @@ if [[ -n "$PACKAGES_LIST" ]]; then
         # Check multiple possible locations for the binary
         BINARY_LOCATIONS=(
             "/home/linuxbrew/.linuxbrew/bin/$package_name"
-            "/home/linuxbrew/.linuxbrew/opt/$package_name/bin/$package_name"
+            "/home/linuxbrew/.linuxbrew/Cellar/$package_name/*/bin/$package_name"
         )
 
         for binary_path in "${BINARY_LOCATIONS[@]}"; do
-            if [[ -f "$binary_path" ]] && [[ ! -f "/usr/local/bin/$package_name" ]]; then
-                echo "Creating symlink for $package_name in /usr/local/bin..."
-                ln -sf "$binary_path" "/usr/local/bin/$package_name"
-                break  # Break once symlink is created
-            fi
+            # Expand glob patterns
+            for expanded_path in $binary_path; do
+                if [[ -f "$expanded_path" ]] && [[ ! -f "/usr/local/bin/$package_name" ]]; then
+                    echo "Creating symlink for $package_name in /usr/local/bin..."
+                    ln -sf "$expanded_path" "/usr/local/bin/$package_name"
+                    break 2  # Break both loops once symlink is created
+                fi
+            done
         done
     done
 fi

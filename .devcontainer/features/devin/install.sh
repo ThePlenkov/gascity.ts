@@ -2,7 +2,6 @@
 set -e
 
 # Devin CLI Installation Script (non-interactive)
-# This is the main installation script that gets called by the devcontainer wrapper
 
 VERSION=${VERSION:-"latest"}
 INSTALL_METHOD=${INSTALLMETHOD:-"script"}
@@ -180,6 +179,3 @@ fi
 set -e
 
 echo "Devin CLI installed successfully!"
-
-# Exit successfully to prevent double-execution
-exit 0
