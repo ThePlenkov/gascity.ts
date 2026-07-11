@@ -2,18 +2,14 @@
 
 This feature installs system dependencies required for Playwright browser automation in devcontainer environments.
 
-Compatible with Ubuntu 22.04, 24.04, and 26.04 (resolute). On 24.04+ many
-libraries gained a `t64` SONAME suffix during the time_t transition; the
-installer probes for the suffixed name first and falls back to the legacy
-name, so the same feature works across the LTS spectrum without per-distro
-overrides.
+It uses Playwright's own `install-deps` command to ensure the dependency list is always up-to-date with the latest Playwright releases. This handles package name changes across Ubuntu versions (e.g., t64 suffix, libgdk-pixbuf replacements) automatically.
 
 ## Features
 
-- Installs all required system libraries for browser automation
+- Installs all required system libraries for browser automation via Playwright's install-deps
 - Supports multiple browser engines (Chromium, Firefox, WebKit)
 - Configures environment for headless browser operation
-- Optional automatic browser binary installation via Playwright CLI
+- Always uses the latest Playwright dependency lists
 
 ## Options
 
@@ -81,15 +77,14 @@ Add to your `devcontainer.json`:
 
 ## System Dependencies Installed
 
-This feature installs the following system packages required by Playwright:
+This feature uses Playwright's `install-deps` command, which automatically installs the correct system packages for your Ubuntu version. The exact packages vary by distribution and Playwright version, but typically include:
 
-- **Core libraries**: libnss3, libnspr4, libatk1.0-0, libatk-bridge2.0-0, libcups2, libdrm2, libxkbcommon0
-- **Graphics libraries**: libxcomposite1, libxdamage1, libxfixes3, libxrandr2, libgbm1, libasound2
-- **Accessibility**: libatspi2.0-0
-- **Rendering**: libpango-1.0-0, libcairo2, libgtk-3-0, libgdk-pixbuf2.0-0
-- **X11 libraries**: libxshmfence1, libgl1, libglib2.0-0, libfontconfig1, libfreetype6, libx11-6, libx11-xcb1, libxcb1, libxext6, libxrender1
-- **Fonts**: fonts-liberation
-- **Additional**: libu2f-udev, libvulkan1, xvfb
+- X11 and graphics libraries (libx11, libxcomposite, libxdamage, etc.)
+- Rendering and font libraries (libcairo, libpango, libfreetype, etc.)
+- GTK and accessibility libraries (libgtk-3-0, libatk, etc.)
+- Audio and media libraries (libasound2, etc.)
+
+Playwright maintains these lists in their source code and updates them as Ubuntu package names change, so you always get the correct dependencies.
 
 ## Environment Variables
 
@@ -131,9 +126,8 @@ npx playwright install --force
 If you encounter errors related to missing libraries:
 
 ```bash
-# Reinstall this feature or manually install dependencies
-sudo apt-get update
-sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libatspi2.0-0 libpango-1.0-0 libcairo2 libgtk-3-0 libgdk-pixbuf2.0-0 libxshmfence1 libgl1 libglib2.0-0 libfontconfig1 libfreetype6 libx11-6 libx11-xcb1 libxcb1 libxcb-glx0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 libxext6 libxrender1 fonts-liberation libu2f-udev libvulkan1 xvfb
+# Reinstall dependencies using Playwright's command
+npx playwright install-deps chromium
 ```
 
 ### Display issues

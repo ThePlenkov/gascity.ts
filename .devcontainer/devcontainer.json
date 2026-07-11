@@ -38,10 +38,11 @@
     }
   },
   "containerEnv": {
-    "TERM": "xterm-256color"
+    "TERM": "xterm-256color",
+    "HUSKY": "0"
   },
   "remoteUser": "vscode",
   "runArgs": ["--tty"],
-  "postCreateCommand": "bun install && npx playwright install chromium"
+  "postCreateCommand": "./node_modules/.bin/playwright install chromium"
 }
 
