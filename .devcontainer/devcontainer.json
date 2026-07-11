@@ -22,6 +22,9 @@
     "./features/playwright": {
       "browsers": "chromium",
       "installMethod": "auto"
+    },
+    "./features/bob": {
+      "version": "latest"
     }
   },
   "customizations": {
