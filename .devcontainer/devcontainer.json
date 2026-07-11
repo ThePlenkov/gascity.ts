@@ -11,7 +11,9 @@
     "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "24"
     },
-    "./features/bun": {},
+    "./features/homebrew": {
+      "packages": ["gastownhall/gascity/gascity", "oven-sh/bun/bun"]
+    },
     "./features/devin": {
       "version": "latest"
     },
