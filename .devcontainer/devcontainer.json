@@ -10,18 +10,6 @@
     },
     "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "24"
-    },
-    "./features/bun": {},
-    "./features/devin": {
-      "version": "latest"
-    },
-    "./features/kilo": {},
-    "./features/playwright": {
-      "browsers": "chromium",
-      "installMethod": "auto"
-    },
-    "./features/bob": {
-      "version": "latest"
     }
   },
   "customizations": {
@@ -45,6 +33,6 @@
   },
   "remoteUser": "vscode",
   "runArgs": ["--tty"],
-  "postCreateCommand": "bun install && npx playwright install chromium"
+  "postCreateCommand": "curl -fsSL https://bun.sh/install | bash && export PATH=\"$HOME/.bun/bin:$PATH\" && curl -fsSL https://cli.devin.ai/install.sh | bash && bun install && npx playwright install chromium"
 }
 
