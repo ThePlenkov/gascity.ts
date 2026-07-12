@@ -51,9 +51,26 @@ function parseKeyValue(line: string): [string, string] | null {
 }
 
 function stripInlineComment(value: string): string {
-  const idx = value.indexOf('#')
-  if (idx < 0) return value
-  return value.slice(0, idx).trim()
+  let quote: '"' | "'" | null = null
+  let escaped = false
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i]
+    if (quote) {
+      if (quote === '"' && char === '\\' && !escaped) {
+        escaped = true
+        continue
+      }
+      if (char === quote && !escaped) quote = null
+      escaped = false
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+    } else if (char === '#') {
+      return value.slice(0, i).trim()
+    }
+  }
+  return value.trim()
 }
 
 function unquote(value: string): string {
@@ -260,33 +277,29 @@ function validateDocument(doc: RegistryDocument): void {
 export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
   if (pack.releases.length === 0) return undefined
   let best: RegistryRelease | null = null
-  let bestKey: Array<number | string> | null = null
-  let bestIsPrerelease = false
   for (const r of pack.releases) {
-    // In SemVer, only `-` indicates prerelease. `+` denotes build metadata.
-    const isPrerelease = r.version.includes('-')
-    const key = versionSegments(r.version)
-    // Prefer stable releases over prereleases
-    if (bestKey === null) {
+    if (best === null || compareVersions(r.version, best.version) > 0) {
       best = r
-      bestKey = key
-      bestIsPrerelease = isPrerelease
-    } else if (!bestIsPrerelease && isPrerelease) {
-      // Current best is stable, current is prerelease - keep best
-      continue
-    } else if (bestIsPrerelease && !isPrerelease) {
-      // Current best is prerelease, current is stable - upgrade
-      best = r
-      bestKey = key
-      bestIsPrerelease = isPrerelease
-    } else if (compareTuple(key, bestKey) > 0) {
-      // Both are same type (both stable or both prerelease) - compare tuple-wise
-      best = r
-      bestKey = key
-      bestIsPrerelease = isPrerelease
     }
   }
   return best ?? undefined
+}
+
+/**
+ * Compare two SemVer strings, returning a positive number when `a`
+ * has higher precedence than `b`, negative when lower, and 0 when
+ * equal. Core version (major.minor.patch) is compared first; the
+ * stable-versus-prerelease preference only applies when the core
+ * versions match (so `2.0.0-alpha` outranks `1.0.0`). Build metadata
+ * (`+...`) is ignored for precedence, per SemVer §10.
+ */
+function compareVersions(a: string, b: string): number {
+  const coreCmp = compareTuple(coreSegments(a), coreSegments(b))
+  if (coreCmp !== 0) return coreCmp
+  const aPre = isPrerelease(a)
+  const bPre = isPrerelease(b)
+  if (aPre !== bPre) return aPre ? -1 : 1
+  return compareTuple(prereleaseSegments(a), prereleaseSegments(b))
 }
 
 function compareTuple(a: Array<number | string>, b: Array<number | string>): number {
@@ -303,12 +316,36 @@ function compareTuple(a: Array<number | string>, b: Array<number | string>): num
   return a.length - b.length
 }
 
-function versionSegments(version: string): Array<number | string> {
+/**
+ * A version is a prerelease only when a `-` appears in the portion
+ * before any `+` build metadata (SemVer: build metadata may itself
+ * contain hyphens, e.g. `1.0.0+build-1`, which is NOT a prerelease).
+ */
+function isPrerelease(version: string): boolean {
   const withoutBuild = version.split('+')[0] ?? ''
-  return withoutBuild.split(/[.\-]/).map((seg) => {
+  return withoutBuild.includes('-')
+}
+
+function coreSegments(version: string): number[] {
+  const withoutBuild = version.split('+')[0] ?? ''
+  const core = withoutBuild.split('-')[0] ?? ''
+  return core.split('.').map((seg) => {
     const n = Number(seg)
-    return Number.isFinite(n) ? n : seg
+    return Number.isFinite(n) ? n : 0
   })
+}
+
+function prereleaseSegments(version: string): Array<number | string> {
+  const withoutBuild = version.split('+')[0] ?? ''
+  const dashIdx = withoutBuild.indexOf('-')
+  if (dashIdx < 0) return []
+  return withoutBuild
+    .slice(dashIdx + 1)
+    .split('.')
+    .map((seg) => {
+      const n = Number(seg)
+      return Number.isFinite(n) ? n : seg
+    })
 }
 
 /**

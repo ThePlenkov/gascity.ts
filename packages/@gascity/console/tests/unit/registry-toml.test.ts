@@ -123,6 +123,20 @@ top_level_future = "ok"
     expect(doc.packs[0]?.releases[0]?.version).toBe('0.1.0');
   });
 
+  it('keeps a "#" that appears inside a quoted value', () => {
+    const doc = parseRegistryToml(`
+[[pack]]
+  name = "alpha"
+  source = "x"
+  [[pack.release]]
+    version = "0.1.0"
+    description = "fixes issue #3339 in the parser"
+`);
+    expect(doc.packs[0]?.releases[0]?.description).toBe(
+      'fixes issue #3339 in the parser',
+    );
+  });
+
   it('round-trips against the upstream gastownhall/gascity-packs registry shape', async () => {
     // Inline a small slice that mirrors the upstream structure: top-level
     // scalars + nested array-of-tables. We can't fetch from network in unit
@@ -179,6 +193,45 @@ describe('latestRelease', () => {
   source = "x"
 `);
     expect(latestRelease(doc.packs[0]!)).toBeUndefined();
+  });
+
+  it('prefers a stable release only when core versions match', () => {
+    const doc = parseRegistryToml(`
+[[pack]]
+  name = "alpha"
+  source = "x"
+  [[pack.release]]
+    version = "1.0.0"
+  [[pack.release]]
+    version = "1.0.0-alpha"
+`);
+    expect(latestRelease(doc.packs[0]!)?.version).toBe('1.0.0');
+  });
+
+  it('prefers a higher-core prerelease over a lower-core stable release', () => {
+    const doc = parseRegistryToml(`
+[[pack]]
+  name = "alpha"
+  source = "x"
+  [[pack.release]]
+    version = "1.0.0"
+  [[pack.release]]
+    version = "2.0.0-alpha"
+`);
+    expect(latestRelease(doc.packs[0]!)?.version).toBe('2.0.0-alpha');
+  });
+
+  it('treats a hyphen in build metadata as stable, not prerelease', () => {
+    const doc = parseRegistryToml(`
+[[pack]]
+  name = "alpha"
+  source = "x"
+  [[pack.release]]
+    version = "1.0.0+build-1"
+  [[pack.release]]
+    version = "1.0.0-alpha"
+`);
+    expect(latestRelease(doc.packs[0]!)?.version).toBe('1.0.0+build-1');
   });
 });
 
