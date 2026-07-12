@@ -17,6 +17,7 @@ import { derivePackName, PACK_NAME_RE } from './packs-catalog'
 import { summariseRegistryCommand } from './registry-feedback'
 import * as path from 'node:path'
 import { CITY, unwrap, SESSION_NAME_RE, SHELL_BIN_RE, safeTmuxBin, runTmux } from './gc.functions.shared'
+import type { RegistryDocument, RegistryPack, RegistryRelease } from './registry-toml'
 
 export interface TmuxSessionInfo {
   name: string
@@ -536,91 +537,134 @@ export const gcCityStatus = createServerFn({ method: 'GET' })
     const override = data?.apiUrl
     const { url, source } = resolveSupervisorUrl(override)
     if (isSupervisorApiDisabled()) {
-      return {
-        reachable: false as const,
-        city: cityName,
-        url,
-        urlSource: source,
-        urlDisabled: true as const,
-        running: false as const,
-        agents: { total: 0, running: 0, idle: 0 },
-        sessions: { total: 0, running: 0 },
-        mail: { total: 0, unread: 0 },
-        work: { open: 0, closed: 0 },
-        partial: false,
-        error: 'GC_NO_API is set — supervisor API calls are disabled',
-      }
+      return disabledCityStatus(cityName, url, source)
     }
-    return withSupervisorUrl(override, async () => {
-      try {
-        const res = await DefaultService.getV0CityByCityNameStatus(cityName, undefined, undefined, data?.lite ?? true)
-        const ok = unwrap(res as Envelope<{
-          name?: string
-          path?: string
-          agent_count?: number
-          agents?: { total?: number; running?: number; idle?: number; suspended?: number; error?: number }
-          sessions?: { total?: number; running?: number; idle?: number }
-          mail?: { total?: number; unread?: number }
-          work?: { open_beads?: number; closed_beads?: number }
-          partial?: boolean
-        }>)
-        if (!ok) {
-          return {
-            reachable: true as const,
-            city: cityName,
-            url,
-            urlSource: source,
-            running: false as const,
-            agents: { total: 0, running: 0, idle: 0 },
-            sessions: { total: 0, running: 0 },
-            mail: { total: 0, unread: 0 },
-            work: { open: 0, closed: 0 },
-            partial: false,
-            error: (res as { detail?: string }).detail,
-          }
-        }
-        return {
-          reachable: true as const,
-          city: ok.name ?? cityName,
-          url,
-          urlSource: source,
-          running: (ok.agents?.running ?? 0) > 0 || (ok.sessions?.running ?? 0) > 0,
-          agents: {
-            total: ok.agents?.total ?? ok.agent_count ?? 0,
-            running: ok.agents?.running ?? 0,
-            idle: ok.agents?.idle ?? 0,
-            suspended: ok.agents?.suspended ?? 0,
-            error: ok.agents?.error ?? 0,
-          },
-          sessions: {
-            total: ok.sessions?.total ?? 0,
-            running: ok.sessions?.running ?? 0,
-            idle: ok.sessions?.idle ?? 0,
-          },
-          mail: { total: ok.mail?.total ?? 0, unread: ok.mail?.unread ?? 0 },
-          work: { open: ok.work?.open_beads ?? 0, closed: ok.work?.closed_beads ?? 0 },
-          partial: ok.partial ?? false,
-        }
-      } catch (error) {
-        if (!silentIfOffline(error)) {
-          console.error('Failed to get city status:', error)
-        }
-        return {
-          reachable: false as const,
-          city: cityName,
-          url,
-          urlSource: source,
-          running: false as const,
-          agents: { total: 0, running: 0, idle: 0 },
-          sessions: { total: 0, running: 0 },
-          mail: { total: 0, unread: 0 },
-          work: { open: 0, closed: 0 },
-          partial: false,
-          error: silentIfOffline(error) ? 'gas city supervisor is not reachable' : (error instanceof Error ? error.message : String(error)), // NOSONAR: simple ternary
-        }
-      }
-    })
+    return withSupervisorUrl(override, () => fetchCityStatus(cityName, url, source, data?.lite ?? true))
   })
+
+function disabledCityStatus(cityName: string, url: string, source: string) {
+  return {
+    reachable: false as const,
+    city: cityName,
+    url,
+    urlSource: source,
+    urlDisabled: true as const,
+    running: false as const,
+    agents: { total: 0, running: 0, idle: 0 },
+    sessions: { total: 0, running: 0 },
+    mail: { total: 0, unread: 0 },
+    work: { open: 0, closed: 0 },
+    partial: false,
+    error: 'GC_NO_API is set — supervisor API calls are disabled',
+  }
+}
+
+async function fetchCityStatus(cityName: string, url: string, source: string, lite: boolean) {
+  try {
+    const res = await DefaultService.getV0CityByCityNameStatus(cityName, undefined, undefined, lite)
+    return mapCityStatusResponse(res, cityName, url, source)
+  } catch (error) {
+    if (!silentIfOffline(error)) {
+      console.error('Failed to get city status:', error)
+    }
+    return offlineCityStatus(cityName, url, source, error)
+  }
+}
+
+function mapCityStatusResponse(
+  res: unknown,
+  cityName: string,
+  url: string,
+  source: string,
+) {
+  const ok = unwrap(res as Envelope<{
+    name?: string
+    path?: string
+    agent_count?: number
+    agents?: { total?: number; running?: number; idle?: number; suspended?: number; error?: number }
+    sessions?: { total?: number; running?: number; idle?: number }
+    mail?: { total?: number; unread?: number }
+    work?: { open_beads?: number; closed_beads?: number }
+    partial?: boolean
+  }>)
+  if (!ok) {
+    return {
+      reachable: true as const,
+      city: cityName,
+      url,
+      urlSource: source,
+      running: false as const,
+      agents: { total: 0, running: 0, idle: 0 },
+      sessions: { total: 0, running: 0 },
+      mail: { total: 0, unread: 0 },
+      work: { open: 0, closed: 0 },
+      partial: false,
+      error: (res as { detail?: string }).detail,
+    }
+  }
+  return mapCityStatusOk(ok, cityName, url, source)
+}
+
+function mapCityStatusOk(
+  ok: {
+    name?: string
+    path?: string
+    agent_count?: number
+    agents?: { total?: number; running?: number; idle?: number; suspended?: number; error?: number }
+    sessions?: { total?: number; running?: number; idle?: number }
+    mail?: { total?: number; unread?: number }
+    work?: { open_beads?: number; closed_beads?: number }
+    partial?: boolean
+  },
+  cityName: string,
+  url: string,
+  source: string,
+) {
+  const agents = ok.agents ?? {}
+  const sessions = ok.sessions ?? {}
+  const mail = ok.mail ?? {}
+  const work = ok.work ?? {}
+  return {
+    reachable: true as const,
+    city: ok.name ?? cityName,
+    url,
+    urlSource: source,
+    running: (agents.running ?? 0) > 0 || (sessions.running ?? 0) > 0,
+    agents: {
+      total: agents.total ?? ok.agent_count ?? 0,
+      running: agents.running ?? 0,
+      idle: agents.idle ?? 0,
+      suspended: agents.suspended ?? 0,
+      error: agents.error ?? 0,
+    },
+    sessions: {
+      total: sessions.total ?? 0,
+      running: sessions.running ?? 0,
+      idle: sessions.idle ?? 0,
+    },
+    mail: { total: mail.total ?? 0, unread: mail.unread ?? 0 },
+    work: { open: work.open_beads ?? 0, closed: work.closed_beads ?? 0 },
+    partial: ok.partial ?? false,
+  }
+}
+
+function offlineCityStatus(cityName: string, url: string, source: string, error: unknown) {
+  return {
+    reachable: false as const,
+    city: cityName,
+    url,
+    urlSource: source,
+    running: false as const,
+    agents: { total: 0, running: 0, idle: 0 },
+    sessions: { total: 0, running: 0 },
+    mail: { total: 0, unread: 0 },
+    work: { open: 0, closed: 0 },
+    partial: false,
+    error: silentIfOffline(error)
+      ? 'gas city supervisor is not reachable'
+      : (error instanceof Error ? error.message : String(error)),
+  }
+}
 
 export const gcHealth = createServerFn({ method: 'GET' })
   .validator(z.object({ apiUrl: z.string().optional() }).optional())
@@ -1127,7 +1171,6 @@ function resolveCityDir(override?: string): string {
     if (process.env.GC_CITY_DIR && process.env.GC_CITY_DIR.trim().length > 0) return process.env.GC_CITY_DIR
     return process.cwd()
   })()
-  const path = nodePath
   const resolved = path.resolve(raw)
   // Allow-list: must live under one of the roots. Default to HOME if set,
   // else `/workspaces` (typical dev container layout), else the resolved
@@ -2007,14 +2050,14 @@ export const gcCityInitWithPacks = createServerFn({ method: 'POST' })
       try {
         // City layout is `agents/<name>/agent.toml + prompt.template.md`.
         // The rig dir already mirrors that layout (`e2e/rig/agents/...`).
-        const cityAgentsDir = nodePath.join(data.path, 'agents')
+        const cityAgentsDir = path.join(data.path, 'agents')
         await mkdir(cityAgentsDir, { recursive: true })
-        const rigAgentsDir = nodePath.join(process.env.GC_RIG_DIR, 'agents')
+        const rigAgentsDir = path.join(process.env.GC_RIG_DIR, 'agents')
         const entries = await import('node:fs/promises').then((m) => m.readdir(rigAgentsDir, { withFileTypes: true }))
         for (const ent of entries) {
           if (!ent.isDirectory()) continue
-          const srcDir = nodePath.join(rigAgentsDir, ent.name)
-          const dstDir = nodePath.join(cityAgentsDir, ent.name)
+          const srcDir = path.join(rigAgentsDir, ent.name)
+          const dstDir = path.join(cityAgentsDir, ent.name)
           await rm(dstDir, { recursive: true, force: true })
           await cp(srcDir, dstDir, { recursive: true })
         }
@@ -2389,16 +2432,10 @@ export const gcListMarketplaceEntries = createServerFn({ method: 'GET' })
       })
       .optional(),
   )
-  .handler(async ({ data }) => { // NOSONAR: complex marketplace logic requires multiple conditionals
+  .handler(async ({ data }) => {
     const configured = await getConfiguredRegistries(data?.cwd)
-    const registries = configured.registries.length > 0
-      ? configured.registries
-      : [{ name: 'upstream', source: DEFAULT_MARKETPLACE_URL }]
-
-    const wantRegistry = data?.registry?.trim() || ''
-    const filteredRegistries = wantRegistry
-      ? registries.filter((r) => r.name === wantRegistry)
-      : registries
+    const registries = selectMarketplaceRegistries(configured.registries)
+    const filteredRegistries = filterRegistriesByName(registries, data?.registry)
 
     const { parseRegistryToml, latestRelease, inferPackTag, inferPackTier } =
       await import('./registry-toml')
@@ -2407,87 +2444,136 @@ export const gcListMarketplaceEntries = createServerFn({ method: 'GET' })
       filteredRegistries.map((r) => fetchRegistryToml(r.source).then((f) => ({ r, f }))),
     )
 
-    // Index installed packs by both name AND normalised source URL.
-    // We need both keys because an operator may have installed a
-    // pack under a different binding name (e.g. `gc import add
-    // https://…/bmad --name my-bmad`). Without the source key,
-    // the catalog entry for `bmad` would falsely show "available"
-    // even though it's already installed — clicking install would
-    // then either no-op or create a duplicate binding.
-    const installedByName = new Map<
-      string,
-      { name: string; source?: string; path?: string; ref?: string }
-    >()
-    const installedBySource = new Map<
-      string,
-      { name: string; source?: string; path?: string; ref?: string }
-    >()
-    try {
-      const installed = await gcListPacks()
-      for (const p of installed ?? []) {
-        installedByName.set(p.name, p)
-        const key = normalizeGitSource(p.source ?? p.path)
-        if (key) installedBySource.set(key, p)
-      }
-    } catch {
-      /* degraded mode — leave maps empty */
-    }
-
-    const entries: MarketplaceEntry[] = []
-    const registryMeta: MarketplaceListing['registries'] = []
-    for (const { r, f } of fetched) {
-      registryMeta.push({
-        name: r.name,
-        source: r.source,
-        stale: f.stale,
-        error: f.error,
-        fetchedAt: new Date(f.fetchedAt).toISOString(),
-      })
-      if (!f.toml) continue
-      let doc
-      try {
-        doc = parseRegistryToml(f.toml)
-      } catch (err) {
-        const lastIndex = registryMeta.length - 1
-        registryMeta[lastIndex] = {
-          ...registryMeta[lastIndex]!,
-          error: err instanceof Error ? err.message : String(err),
-        }
-        continue
-      }
-      for (const pack of doc.packs) {
-        const rel = latestRelease(pack)
-        // Match on name OR normalised source. Name is the common
-        // case; source catches the "renamed binding" scenario.
-        const installed =
-          installedByName.get(pack.name) ??
-          installedBySource.get(normalizeGitSource(pack.source) ?? '')
-        entries.push({
-          name: pack.name,
-          description: pack.description,
-          source: pack.source,
-          sourceKind: pack.sourceKind,
-          tag: inferPackTag(pack),
-          tier: inferPackTier(pack),
-          latestVersion: rel?.version,
-          latestCommit: rel?.commit,
-          latestRef: rel?.ref,
-          readmeUrl: readmeUrlFor(pack.source, rel?.ref, pack.name),
-          installed: Boolean(installed),
-          installedRef: installed?.ref,
-          installedSource: installed?.source ?? installed?.path,
-          registryName: r.name,
-        })
-      }
-    }
+    const installed = await buildInstalledPackIndex()
+    const { entries, registryMeta } = buildMarketplaceListing(fetched, installed, {
+      parseRegistryToml,
+      latestRelease,
+      inferPackTag,
+      inferPackTier,
+    })
 
     return {
       registries: registryMeta,
       entries,
       // Keep these top-level fields for clients that read them:
-      ...(configuredError ? { error: configuredError } : {}),
+      ...(configured.error ? { error: configured.error } : {}),
     } as MarketplaceListing & { error?: string }
   })
+
+function selectMarketplaceRegistries(configured: RegistrySummary[]): RegistrySummary[] {
+  if (configured.length > 0) return configured
+  return [{ name: 'upstream', source: DEFAULT_MARKETPLACE_URL }]
+}
+
+function filterRegistriesByName(registries: RegistrySummary[], filter?: string): RegistrySummary[] {
+  const want = filter?.trim() ?? ''
+  if (!want) return registries
+  return registries.filter((r) => r.name === want)
+}
+
+async function buildInstalledPackIndex(): Promise<{
+  byName: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+  bySource: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+}> {
+  const byName = new Map<string, { name: string; source?: string; path?: string; ref?: string }>()
+  const bySource = new Map<string, { name: string; source?: string; path?: string; ref?: string }>()
+  try {
+    const installed = await gcListPacks()
+    for (const p of installed ?? []) {
+      byName.set(p.name, p)
+      const key = normalizeGitSource(p.source ?? p.path)
+      if (key) bySource.set(key, p)
+    }
+  } catch {
+    /* degraded mode — leave maps empty */
+  }
+  return { byName, bySource }
+}
+
+interface BuildMarketplaceListingDeps {
+  parseRegistryToml: (text: string) => RegistryDocument
+  latestRelease: (pack: RegistryPack) => RegistryRelease | undefined
+  inferPackTag: (pack: RegistryPack) => string
+  inferPackTier: (pack: RegistryPack) => number | undefined
+}
+
+function buildMarketplaceListing(
+  fetched: Array<{ r: RegistrySummary; f: Awaited<ReturnType<typeof fetchRegistryToml>> }>,
+  installed: {
+    byName: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+    bySource: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+  },
+  deps: BuildMarketplaceListingDeps,
+): { entries: MarketplaceEntry[]; registryMeta: MarketplaceListing['registries'] } {
+  const entries: MarketplaceEntry[] = []
+  const registryMeta: MarketplaceListing['registries'] = []
+  for (const { r, f } of fetched) {
+    registryMeta.push({
+      name: r.name,
+      source: r.source,
+      stale: f.stale,
+      error: f.error,
+      fetchedAt: new Date(f.fetchedAt).toISOString(),
+    })
+    if (!f.toml) continue
+    const doc = parseRegistryDocument(f.toml, registryMeta, deps.parseRegistryToml)
+    if (!doc) continue
+    for (const pack of doc.packs) {
+      entries.push(buildMarketplaceEntry(pack, r, installed, deps))
+    }
+  }
+  return { entries, registryMeta }
+}
+
+function parseRegistryDocument(
+  toml: string,
+  registryMeta: MarketplaceListing['registries'],
+  parse: (text: string) => RegistryDocument,
+): RegistryDocument | null {
+  try {
+    return parse(toml)
+  } catch (err) {
+    const lastIndex = registryMeta.length - 1
+    registryMeta[lastIndex] = {
+      ...registryMeta[lastIndex]!,
+      error: err instanceof Error ? err.message : String(err),
+    }
+    return null
+  }
+}
+
+function buildMarketplaceEntry(
+  pack: RegistryPack,
+  registry: RegistrySummary,
+  installed: {
+    byName: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+    bySource: Map<string, { name: string; source?: string; path?: string; ref?: string }>
+  },
+  deps: BuildMarketplaceListingDeps,
+): MarketplaceEntry {
+  const rel = deps.latestRelease(pack)
+  // Match on name OR normalised source. Name is the common
+  // case; source catches the "renamed binding" scenario.
+  const matched =
+    installed.byName.get(pack.name) ??
+    installed.bySource.get(normalizeGitSource(pack.source) ?? '')
+  return {
+    name: pack.name,
+    description: pack.description,
+    source: pack.source,
+    sourceKind: pack.sourceKind,
+    tag: deps.inferPackTag(pack),
+    tier: deps.inferPackTier(pack),
+    latestVersion: rel?.version,
+    latestCommit: rel?.commit,
+    latestRef: rel?.ref,
+    readmeUrl: readmeUrlFor(pack.source, rel?.ref, pack.name),
+    installed: Boolean(matched),
+    installedRef: matched?.ref,
+    installedSource: matched?.source ?? matched?.path,
+    registryName: registry.name,
+  }
+}
 
 /**
  * Compute update status for every installed pack by joining against
