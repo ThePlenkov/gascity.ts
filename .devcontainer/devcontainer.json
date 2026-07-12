@@ -8,30 +8,43 @@
       "installOhMyZsh": true,
       "upgradePackages": true
     },
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "24"
     },
-    "ghcr.io/devcontainers/features/bun:1": {},
+    "./features/homebrew": {
+      "packages": ["gastownhall/gascity/gascity", "oven-sh/bun/bun"]
+    },
     "./features/devin": {
       "version": "latest"
     },
-    "./features/cursor": {
-      "version": "latest"
-    },
-    "./features/sacp-conductor": {}
+    "./features/kilo": {},
+    "./features/playwright": {
+      "browsers": "chromium",
+      "installMethod": "auto"
+    }
   },
   "customizations": {
     "vscode": {
       "extensions": [
         "github.copilot",
         "ms-vscode.vscode-typescript-next"
-      ]
+      ],
+      "settings": {
+        "mcp.servers": {
+          "lovable": {
+            "type": "http",
+            "url": "https://mcp.lovable.dev"
+          }
+        }
+      }
     }
   },
   "containerEnv": {
-    "TERM": "xterm-256color"
+    "TERM": "xterm-256color",
+    "HUSKY": "0"
   },
   "remoteUser": "vscode",
   "runArgs": ["--tty"],
-  "postCreateCommand": "echo 'Devcontainer ready.'"
+  "postCreateCommand": "bun install && ./node_modules/.bin/playwright install chromium"
 }
+

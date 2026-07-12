@@ -1,0 +1,25 @@
+{
+  "id": "bob",
+  "version": "1.0.0",
+  "name": "Bob Shell",
+  "description": "Install Bob Shell - AI-powered terminal assistant",
+  "documentationURL": "https://www.npmjs.com/package/@roo-code/bob-shell",
+  "license": "MIT",
+  "keywords": [
+    "bob",
+    "ai",
+    "assistant",
+    "shell"
+  ],
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "latest",
+      "description": "Version of Bob Shell to install"
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/node"
+  ]
+}

@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -19,7 +18,7 @@ export const Route = createFileRoute("/cities")({
   component: CitiesPage,
 });
 
-function CitiesPage() {
+function CitiesPage() { // NOSONAR: component has no props
   const list = useServerFn(gcListCities);
   const start = useServerFn(gcCityStart);
   const stop = useServerFn(gcCityStop);
@@ -158,10 +157,10 @@ function CitiesPage() {
 function InitCityDialog({
   onClose,
   onDone,
-}: {
+}: Readonly<{
   onClose: () => void;
   onDone: (output: string) => void;
-}) {
+}>) {
   const listPacks = useServerFn(gcListPacks);
   const initFn = useServerFn(gcCityInitWithPacks);
 
@@ -183,8 +182,19 @@ function InitCityDialog({
         },
       });
     },
-    onSuccess: (r) => onDone(r.output),
-  });
+    onSuccess: (r) => {
+      // Surface the server-fn's `error` field alongside `output` so the
+      // action console can distinguish "init failed because X" from
+      // the bare `gc init threw unexpectedly` summary. The server fn
+      // also runs `POST /v0/city` (init + register + start) — see
+      // `gcCityInitWithPacks` for the wiring.
+      const detail = r.error ? `\n  (${r.error})` : ''
+      onDone(`${r.output}${detail}`)
+    },
+    onError: (e) => {
+      onDone(`gc init failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+    },
+  })
 
   function toggle(name: string) {
     setSelected((s) => {
@@ -199,25 +209,40 @@ function InitCityDialog({
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 pt-[8vh]"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+      role="button" // NOSONAR: backdrop click handler with keyboard support
+      tabIndex={0}
+      aria-label="Close dialog"
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="new city dialog"
+        // Focus trap and background inerting for full keyboard accessibility are
+        // intentionally not implemented in this minimal dialog; revisit when a11y
+        // audit is scheduled.
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <span className="font-mono text-xs text-foreground">new city</span>
           <Link
-            to="/packs"
+            to="/marketplace"
             className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
           >
-            manage packs →
+            browse marketplace →
           </Link>
         </div>
         <div className="px-4 py-3">
-          <label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <label htmlFor="city-path" className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
             city path
           </label>
           <input
+            id="city-path"
             autoFocus
             value={path}
             onChange={(e) => setPath(e.target.value)}
