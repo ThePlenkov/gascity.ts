@@ -68,13 +68,15 @@ test.describe('Beads Tests', () => {
     await page.goto(`${baseURL}/beads`);
     await page.waitForLoadState('domcontentloaded');
     
-    // Look for close button (only visible for non-closed beads)
-    const closeButton = page.getByText('close');
+    // Look for close button (only visible for non-closed beads). Target the
+    // button by role with an exact name so we don't accidentally match the
+    // "closed" filter button (substring `getByText('close')` matches "closed").
+    const closeButton = page.getByRole('button', { name: /^close$/i });
     const count = await closeButton.count();
-    
+
     // Only assert if there are open beads
     if (count > 0) {
-      await expect(closeButton).toBeVisible();
+      await expect(closeButton.first()).toBeVisible();
     }
   });
 });

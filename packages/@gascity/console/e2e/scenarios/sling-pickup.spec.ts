@@ -132,11 +132,17 @@ test.describe('Sling → pickup → result', () => {
 
     // The composer footer should report a real bead id (various prefixes like gd-, BL-, FE-, etc.)
     // now that the stub is fixed. The status line is "slung. bead XXXX".
-    await expect(page.locator('body')).toContainText(/slung\. bead [A-Z0-9-]+/, {
+    // Bead ids can carry lowercase prefixes (e.g. `gd-n8r`), matching the
+    // BEAD_ID_RE allow-list in gc.functions.ts — accept both cases.
+    await expect(page.locator('body')).toContainText(/slung\. bead [A-Za-z0-9-]+/, {
       timeout: 30_000,
     });
-    const beadIdMatch = (await page.content()).match(/[A-Z0-9-]+/);
-    const beadId = beadIdMatch ? beadIdMatch[0] : null;
+    // Anchor extraction to the "slung. bead <id>" marker and read the visible
+    // text (not serialized HTML), so the capture is the real id rather than
+    // the first uppercase token in the document (e.g. "DOCTYPE").
+    const bodyText = (await page.locator('body').textContent()) ?? '';
+    const beadIdMatch = bodyText.match(/slung\. bead\s+([A-Za-z0-9-]+)/i);
+    const beadId = beadIdMatch ? beadIdMatch[1] : null;
     expect(beadId, 'gcSling must return a parseable bead id').toBeTruthy();
     await actions.closeSlingDrawer();
 

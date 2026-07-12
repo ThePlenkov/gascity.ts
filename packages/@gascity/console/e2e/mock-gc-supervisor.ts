@@ -151,15 +151,20 @@ function freshState(): State {
 
 let state: State = freshState()
 
-function recordEvent(type: string, payload: Record<string, unknown>, actor = 'mock-gc'): EventRecord {
+function recordEvent(
+    type: string,
+    payload: Record<string, unknown>,
+    actor = 'mock-gc',
+    targetState: State = state,
+): EventRecord {
     const e: EventRecord = {
-        id: state.nextEventId++,
+        id: targetState.nextEventId++,
         type,
         actor,
         created_at: new Date().toISOString(),
         payload,
     }
-    state.events.push(e)
+    targetState.events.push(e)
     return e
 }
 
@@ -319,14 +324,14 @@ async function handleSupervisorRestart(req: IncomingMessage, res: ServerResponse
     state.city.phase = 'stopped'
     resetCityState()
     recordEvent('supervisor.stopped', {})
-    // NOTE: This setTimeout callback mutates global state without capturing
-    // request-time state. If __reset fires during the 50ms gap, it can
-    // cause inter-test state contamination. This is a known limitation
-    // of the mock server; tests should allow sufficient time between
-    // restart operations and __reset calls.
+    // Capture the state reference at request time so the deferred completion
+    // mutates and records against the state the caller actually saw. Without
+    // this, a `__reset` firing during the 50ms gap would start the NEXT
+    // test's supervisor and record a stale `supervisor.started` event in it.
+    const capturedState = state
     setTimeout(() => {
-        state.supervisorUp = true
-        recordEvent('supervisor.started', { version: SUPERVISOR_VERSION })
+        capturedState.supervisorUp = true
+        recordEvent('supervisor.started', { version: SUPERVISOR_VERSION }, 'mock-gc', capturedState)
     }, 50)
     return json(res, 200, { status: 'ok' })
 }

@@ -85,8 +85,13 @@ test.describe('Sling Drawer Diagnostics', () => {
     await page.screenshot({ path: '/tmp/sling-drawer-diagnostic.png' });
     console.log('Screenshot saved to /tmp/sling-drawer-diagnostic.png');
 
-    // Assert drawer contains expected diagnostic content
-    expect(drawerContent.toLowerCase()).toMatch(/diagnostic|error|warning|info/);
+    // Assert the sling drawer actually opened by scoping to its dialog region
+    // (not the whole page — full-page HTML almost always contains generic
+    // words like "info"/"error", so a page-wide match passes even when the
+    // drawer failed to open). The composer always renders a city/agent select.
+    const slingDialog = page.getByRole('dialog', { name: /sling/i });
+    await expect(slingDialog).toBeVisible();
+    await expect(slingDialog.locator('select').first()).toBeVisible();
 
     // Close drawer
     await actions.closeSlingDrawer();
