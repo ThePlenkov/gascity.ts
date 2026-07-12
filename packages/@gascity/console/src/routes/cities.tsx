@@ -220,6 +220,7 @@ function InitCityDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="new city dialog"
