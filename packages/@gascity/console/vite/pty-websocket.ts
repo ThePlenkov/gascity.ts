@@ -127,7 +127,11 @@ export function tmuxWebSocketPlugin(): Plugin {
         // Vite port must not attach to a tmux session and inject keystrokes
         // (cross-site WebSocket hijacking). Require a same-origin request.
         const host = req.headers.host;
-        const protocol = server.config.server.https ? "https" : "http";
+        const forwardedProto = req.headers["x-forwarded-proto"];
+        const isHttps =
+          (typeof forwardedProto === "string" && forwardedProto.split(",")[0].trim() === "https") ||
+          server.config.server.https;
+        const protocol = isHttps ? "https" : "http";
         const expectedOrigin = host ? new URL(`${protocol}://${host}`).origin : undefined;
         if (!expectedOrigin || req.headers.origin !== expectedOrigin) {
           socket.destroy();

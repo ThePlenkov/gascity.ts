@@ -59,14 +59,12 @@ export const Route = createFileRoute("/api/pty")({
           tmuxBin: string;
           tmux: boolean;
           nodePty: boolean;
-          websocket: boolean;
           message: string;
         } = {
           ok: false,
           tmuxBin,
           tmux: false,
           nodePty: false,
-          websocket: false,
           message: "checking…",
         };
         try {
@@ -81,10 +79,6 @@ export const Route = createFileRoute("/api/pty")({
         // Verify tmux is actually executable; otherwise the WebSocket opens and
         // then fails asynchronously, hiding the "unavailable" hint.
         probe.tmux = isTmuxAvailable(tmuxBin);
-        const upgrade = (request as unknown as Record<string, unknown>)[
-          "upgrade"
-        ];
-        probe.websocket = typeof upgrade === "function";
         probe.ok = probe.nodePty && probe.tmux;
         probe.message = probe.ok
           ? "ready — open a WebSocket to attach a session"
