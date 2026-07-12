@@ -17,12 +17,13 @@
  *   - The PTY is spawned with a sanitized environment, not process.env.
  */
 import type { Plugin, ViteDevServer } from "vite";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import type { WebSocket as WsWebSocket } from "ws";
 
 import {
   attachTmuxPty,
   bindSocketToPty,
+  isTmuxAvailable,
   loadPty,
   TmuxPtyUnavailableError,
   type IPty,
@@ -96,6 +97,15 @@ export function tmuxWebSocketPlugin(): Plugin {
           }
           await loadPty();
           probe.nodePty = true;
+          // A valid node-pty is not enough — without an executable tmux the
+          // upgrade would succeed then fail asynchronously. Gate readiness on
+          // tmux being present so the client shows the unavailable hint here.
+          probe.tmux = isTmuxAvailable(probe.tmuxBin);
+          if (!probe.tmux) {
+            throw new Error(
+              `tmux binary not found or not executable (${probe.tmuxBin})`,
+            );
+          }
           probe.ok = true;
         } catch (err) {
           probe.error = err instanceof Error ? err.message : String(err);
@@ -113,6 +123,15 @@ export function tmuxWebSocketPlugin(): Plugin {
       const httpServer = server.httpServer;
 
       httpServer.on("upgrade", (req, socket, head) => {
+        // Reject cross-origin upgrades: an untrusted page that can reach the
+        // Vite port must not attach to a tmux session and inject keystrokes
+        // (cross-site WebSocket hijacking). Require a same-origin request.
+        const host = req.headers.host;
+        const expectedOrigin = host ? new URL(`http://${host}`).origin : undefined;
+        if (!expectedOrigin || req.headers.origin !== expectedOrigin) {
+          socket.destroy();
+          return;
+        }
         // URL parse is cheap; we only upgrade our path.
         const url = req.url ?? "";
         // Match exactly /api/pty or /api/pty? (with query string), not /api/ptyfoo or /api/pty/evil
@@ -213,7 +232,7 @@ async function handleConnection(
       rows,
       tmuxBin,
       onData: (chunk) => {
-        if (ws.readyState !== ws.OPEN) return;
+        if (ws.readyState !== WebSocket.OPEN) return;
         try {
           ws.send(chunk);
         } catch {

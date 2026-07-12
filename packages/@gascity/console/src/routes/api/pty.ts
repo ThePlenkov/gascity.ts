@@ -18,6 +18,7 @@
  * probe performed by the Vite plugin's middleware.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { isTmuxAvailable, loadPty } from "../../server/tmux-pty";
 
 const NAME_RE = /^[a-zA-Z0-9_.-]{1,64}$/;
 const TMUX_BIN_RE = /^[a-zA-Z0-9_./-]+$/;
@@ -56,32 +57,40 @@ export const Route = createFileRoute("/api/pty")({
         const probe: {
           ok: boolean;
           tmuxBin: string;
+          tmux: boolean;
           nodePty: boolean;
           websocket: boolean;
           message: string;
         } = {
           ok: false,
           tmuxBin,
+          tmux: false,
           nodePty: false,
           websocket: false,
           message: "checking…",
         };
         try {
-          const mod = (await import(
-            /* @vite-ignore */ "@homebridge/node-pty-prebuilt-multiarch"
-          ).catch(() => null)) as { spawn?: unknown } | null;
-          if (mod && typeof mod.spawn === "function") probe.nodePty = true;
-          const upgrade = (request as unknown as Record<string, unknown>)[
-            "upgrade"
-          ];
-          probe.websocket = typeof upgrade === "function";
-          probe.ok = probe.nodePty;
-          probe.message = probe.ok
-            ? "ready — open a WebSocket to attach a session"
-            : "node-pty not installed. Run `bun add @homebridge/node-pty-prebuilt-multiarch` and restart the dev server.";
-        } catch (err) {
-          probe.message = err instanceof Error ? err.message : String(err);
+          // Use the same loader the bridge uses (`loadPty`) so the probe can't
+          // report a false negative for a valid default-export module shape or
+          // the `node-pty` fallback that the narrow `mod.spawn` check missed.
+          await loadPty();
+          probe.nodePty = true;
+        } catch {
+          probe.nodePty = false;
         }
+        // Verify tmux is actually executable; otherwise the WebSocket opens and
+        // then fails asynchronously, hiding the "unavailable" hint.
+        probe.tmux = isTmuxAvailable(tmuxBin);
+        const upgrade = (request as unknown as Record<string, unknown>)[
+          "upgrade"
+        ];
+        probe.websocket = typeof upgrade === "function";
+        probe.ok = probe.nodePty && probe.tmux;
+        probe.message = probe.ok
+          ? "ready — open a WebSocket to attach a session"
+          : !probe.nodePty
+            ? "node-pty not installed. Run `bun add @homebridge/node-pty-prebuilt-multiarch` and restart the dev server."
+            : `tmux binary not found or not executable (${tmuxBin}). Install tmux and restart the dev server.`;
 
         return Response.json(probe, { status: probe.ok ? 200 : 503 });
       },

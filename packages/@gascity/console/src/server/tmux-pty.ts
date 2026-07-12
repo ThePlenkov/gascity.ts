@@ -29,6 +29,7 @@
 // `vite-env.d.ts` ambient declaration shadows the package. We resolve via
 // the `WebSocket` namespace import of the `ws` package, which @types/ws
 // exports as a class extending EventEmitter (so `.on("message", ...)` works).
+import { spawnSync } from "node:child_process";
 import type { WebSocket as WsWebSocket } from "ws";
 
 export interface TmuxPtyOptions {
@@ -118,6 +119,24 @@ export async function loadPty(): Promise<IPtyModule> {
 }
 
 /**
+ * Best-effort check that the `tmux` binary is present and executable by
+ * running `tmux -V`. Used by the readiness probes so a host without tmux
+ * reports "unavailable" during feature detection instead of accepting a
+ * WebSocket that then fails asynchronously.
+ *
+ * The caller MUST validate `tmuxBin` against a strict allow-list before
+ * passing it here (this only ever runs in local dev, never production).
+ */
+export function isTmuxAvailable(tmuxBin = "tmux"): boolean {
+  try {
+    const res = spawnSync(tmuxBin, ["-V"], { stdio: "ignore", timeout: 2000 });
+    return !res.error && res.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Spawn tmux attached to the given session and pipe its output to a callback.
  * Resolves with the live IPty handle plus a cleanup function. The caller is
  * responsible for calling cleanup when the WebSocket closes.
@@ -175,25 +194,36 @@ export async function attachTmuxPty(
  */
 export function handleBrowserMessage(pty: IPty, raw: unknown): void {
   if (typeof raw === "string") {
-    const trimmed = raw.trimStart();
-    if (trimmed.startsWith("{")) {
-      const handled = tryHandleResizeMessage(pty, trimmed);
-      if (handled) return;
-    }
-    pty.write(raw);
+    writeToPty(pty, raw);
     return; // NOSONAR: early return pattern for type narrowing
   }
+  // The `ws` library delivers every frame (including text) as a Node `Buffer`
+  // by default. A Buffer is a Uint8Array view, so it is NOT `instanceof
+  // ArrayBuffer` and is NOT an Array — without this branch, keystrokes and
+  // resize frames were silently dropped, leaving the terminal unusable.
+  if (Buffer.isBuffer(raw)) {
+    writeToPty(pty, raw.toString("utf8"));
+    return;
+  }
   if (raw instanceof ArrayBuffer) {
-    pty.write(Buffer.from(raw).toString("utf8"));
+    writeToPty(pty, Buffer.from(raw).toString("utf8"));
     return;
   }
   // Handle fragmented binary messages (Buffer[] from ws library)
   if (Array.isArray(raw)) {
-    const concatenated = Buffer.concat(raw.map((item) => 
+    const concatenated = Buffer.concat(raw.map((item) =>
       Buffer.isBuffer(item) ? item : Buffer.from(String(item))
     ));
-    pty.write(concatenated.toString("utf8"));
+    writeToPty(pty, concatenated.toString("utf8"));
   }
+}
+
+function writeToPty(pty: IPty, data: string): void {
+  const trimmed = data.trimStart();
+  if (trimmed.startsWith("{") && tryHandleResizeMessage(pty, trimmed)) {
+    return;
+  }
+  pty.write(data);
 }
 
 function tryHandleResizeMessage(pty: IPty, trimmed: string): boolean {
