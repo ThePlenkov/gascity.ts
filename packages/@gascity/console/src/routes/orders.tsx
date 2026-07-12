@@ -74,7 +74,7 @@ function OrdersPage() {
               {(data ?? []).map((o) => {
                 const active = selected === o.name;
                 return (
-                  <div
+                  <li
                     key={o.name}
                     role="button"
                     tabIndex={0}
@@ -142,7 +142,7 @@ function OrdersPage() {
                         fire
                       </button>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
             </ul>

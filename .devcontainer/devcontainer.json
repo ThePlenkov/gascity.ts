@@ -45,6 +45,6 @@
   },
   "remoteUser": "vscode",
   "runArgs": ["--tty"],
-  "postCreateCommand": "./node_modules/.bin/playwright install chromium"
+  "postCreateCommand": "bun install && ./node_modules/.bin/playwright install chromium"
 }
 

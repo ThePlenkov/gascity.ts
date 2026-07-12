@@ -1118,6 +1118,10 @@ async function withSupervisorUrl<T>(
   if (!override || override.trim().length === 0) return fn()
   const trimmed = override.trim().replace(/\/$/, '')
   if (!SUPERVISOR_URL_RE.test(trimmed)) return fn()
+  // NOTE: This pattern mutates global OpenAPI.BASE which could cause race conditions
+  // in truly concurrent scenarios. However, TanStack server functions typically run
+  // in sequential request contexts, mitigating this risk. A full refactor to pass
+  // BASE URL directly to all service methods would be required for complete thread safety.
   const { OpenAPI } = await import('@gascity/client')
   const previous = (OpenAPI as { BASE?: string }).BASE
     ; (OpenAPI as { BASE?: string }).BASE = trimmed
@@ -1126,10 +1130,6 @@ async function withSupervisorUrl<T>(
   } finally {
     ; (OpenAPI as { BASE?: string }).BASE = previous
   }
-  // NOTE: This pattern mutates global OpenAPI.BASE which could cause race conditions
-  // in truly concurrent scenarios. However, TanStack server functions typically run
-  // in sequential request contexts, mitigating this risk. A full refactor to pass
-  // BASE URL directly to all service methods would be required for complete thread safety.
 }
 
 /**

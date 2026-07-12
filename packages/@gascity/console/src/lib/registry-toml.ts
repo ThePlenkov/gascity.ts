@@ -104,7 +104,8 @@ export function parseRegistryToml(text: string): RegistryDocument {
     if (!kv) {
       throw new Error(`registry.toml line ${i + 1}: cannot parse line: ${rawLine}`)
     }
-    const [key, value] = kv
+    const [key, rawValue] = kv
+    const value = coerceScalar(rawValue)
 
     handleKeyValue(key, value, path, doc, packsByName, currentRelease, i)
   }
@@ -249,8 +250,9 @@ function validateDocument(doc: RegistryDocument): void {
  * to "no version" install (which `gc` resolves to HEAD).
  *
  * Lexicographic compare is intentionally NOT used — `0.1.10 < 0.1.2`
- * under `String#localeCompare`. We split on `.`, parse each segment
- * as an integer (falling back to 0), and compare tuple-wise.
+ * under `String#localeCompare`. We split on `.` and `-`, drop `+`
+ * build metadata, parse numeric segments as integers, keep non-numeric
+ * prerelease identifiers as strings, and compare tuple-wise.
  *
  * Stable releases (no prerelease identifier) are always preferred
  * over prereleases (e.g., `1.0.0` > `1.0.0-alpha`).
@@ -258,17 +260,12 @@ function validateDocument(doc: RegistryDocument): void {
 export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
   if (pack.releases.length === 0) return undefined
   let best: RegistryRelease | null = null
-  let bestKey: number[] | null = null
+  let bestKey: Array<number | string> | null = null
   let bestIsPrerelease = false
   for (const r of pack.releases) {
     // In SemVer, only `-` indicates prerelease. `+` denotes build metadata.
     const isPrerelease = r.version.includes('-')
-    const key = r.version
-      .split(/[.\-+]/)
-      .map((seg) => {
-        const n = Number(seg)
-        return Number.isFinite(n) ? n : 0
-      })
+    const key = versionSegments(r.version)
     // Prefer stable releases over prereleases
     if (bestKey === null) {
       best = r
@@ -283,7 +280,7 @@ export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
       bestKey = key
       bestIsPrerelease = isPrerelease
     } else if (compareTuple(key, bestKey) > 0) {
-      // Both are same type (both stable or both prerelease) - compare numerically
+      // Both are same type (both stable or both prerelease) - compare tuple-wise
       best = r
       bestKey = key
       bestIsPrerelease = isPrerelease
@@ -292,14 +289,26 @@ export function latestRelease(pack: RegistryPack): RegistryRelease | undefined {
   return best ?? undefined
 }
 
-function compareTuple(a: number[], b: number[]): number {
+function compareTuple(a: Array<number | string>, b: Array<number | string>): number {
   const len = Math.max(a.length, b.length)
   for (let i = 0; i < len; i++) {
     const ai = a[i] ?? 0
     const bi = b[i] ?? 0
-    if (ai !== bi) return ai - bi
+    if (ai === bi) continue
+    if (typeof ai === 'number' && typeof bi === 'number') return ai - bi
+    if (typeof ai === 'number') return -1
+    if (typeof bi === 'number') return 1
+    return String(ai).localeCompare(String(bi))
   }
-  return 0
+  return a.length - b.length
+}
+
+function versionSegments(version: string): Array<number | string> {
+  const withoutBuild = version.split('+')[0] ?? ''
+  return withoutBuild.split(/[.\-]/).map((seg) => {
+    const n = Number(seg)
+    return Number.isFinite(n) ? n : seg
+  })
 }
 
 /**

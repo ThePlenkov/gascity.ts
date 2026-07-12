@@ -74,8 +74,6 @@ async function proxy(request: Request, splat: string | undefined) {
     return new Response(
       JSON.stringify({
         error: "gc upstream unreachable",
-        target,
-        detail: err instanceof Error ? err.message : String(err),
       }),
       { status: 502, headers: { "Content-Type": "application/json" } },
     );

@@ -53,6 +53,7 @@ if [[ -n "$PACKAGES_LIST" ]]; then
         # Check multiple possible locations for the binary
         BINARY_LOCATIONS=(
             "/home/linuxbrew/.linuxbrew/bin/$package_name"
+            "/home/linuxbrew/.linuxbrew/opt/$package_name/bin/$package_name"
             "/home/linuxbrew/.linuxbrew/Cellar/$package_name/*/bin/$package_name"
         )
 

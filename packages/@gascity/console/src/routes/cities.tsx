@@ -191,6 +191,9 @@ function InitCityDialog({
       const detail = r.error ? `\n  (${r.error})` : ''
       onDone(`${r.output}${detail}`)
     },
+    onError: (e) => {
+      onDone(`gc init failed: ${e instanceof Error ? e.message : 'unknown error'}`)
+    },
   })
 
   function toggle(name: string) {

@@ -20,9 +20,10 @@ const stripSplitHmrBookkeeping = () => ({
     let out = code
     // Drop the HMR `import.meta.hot.data["..."] = TSRSplitComponent` line.
     // Match the specific pattern to avoid removing non-HMR code.
+    const splitHmrPattern = /import\.meta\.hot\.data\[.*\]\s*=\s*TSRSplitComponent/
     const lines = out.split('\n')
     out = lines
-      .filter(line => !line.match(/import\.meta\.hot\.data\[.*\]\s*=\s*TSRSplitComponent/))
+      .filter(line => !splitHmrPattern.test(line))
       .join('\n')
     return out === code ? null : { code: out, map: null }
   },
