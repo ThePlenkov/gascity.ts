@@ -14,6 +14,7 @@
     "./features/homebrew": {
       "packages": ["gastownhall/gascity/gascity", "oven-sh/bun/bun"]
     },
+    "./features/bun": {},
     "./features/devin": {
       "version": "latest"
     },
