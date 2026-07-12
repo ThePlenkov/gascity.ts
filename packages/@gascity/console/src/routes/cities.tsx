@@ -209,8 +209,11 @@ function InitCityDialog({
 
   // Restore focus to whatever was focused before the dialog opened, so
   // dismissing it doesn't strand the keyboard user at the top of the page.
+  // autoFocus is intentionally omitted so the effect captures the trigger
+  // element before it moves focus into the dialog.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.getElementById("city-path")?.focus();
     return () => previouslyFocused?.focus?.();
   }, []);
 
@@ -278,7 +281,6 @@ function InitCityDialog({
           </label>
           <input
             id="city-path"
-            autoFocus
             value={path}
             onChange={(e) => setPath(e.target.value)}
             placeholder="~/my-city"

@@ -87,7 +87,7 @@ function OrdersPage() {
                         swallowed by a row-level handler. */}
                     <button
                       type="button"
-                      aria-pressed={active}
+                      aria-current={active ? "true" : undefined}
                       onClick={() => setSelected(o.name)}
                       className="col-span-4 grid grid-cols-subgrid items-center gap-3 cursor-pointer text-left"
                     >
