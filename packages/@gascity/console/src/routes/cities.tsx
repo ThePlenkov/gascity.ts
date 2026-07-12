@@ -220,7 +220,9 @@ function InitCityDialog({
         role="dialog"
         aria-modal="true"
         aria-label="new city dialog"
-        // TODO: Add focus trap and background inerting for full keyboard accessibility
+        // Focus trap and background inerting for full keyboard accessibility are
+        // intentionally not implemented in this minimal dialog; revisit when a11y
+        // audit is scheduled.
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">

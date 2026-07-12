@@ -1,35 +1,24 @@
 #!/bin/bash
 set -e
 
-echo "Installing Bun JavaScript runtime..."
+# Bun is installed by the homebrew feature dependency defined in
+# devcontainer-feature.json. This script only ensures the current
+# feature build has the homebrew binary on PATH and verifies the
+# installation is available.
+echo "Verifying Bun JavaScript runtime..."
 
-# Install Bun using the official installer
-curl -fsSL https://bun.sh/install | bash
-
-# Add bun to PATH for current and future sessions
-BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# Add to .bashrc if it exists
-if [ -f "$HOME/.bashrc" ]; then
-    if ! grep -q 'export BUN_INSTALL="$HOME/.bun"' "$HOME/.bashrc"; then
-        echo 'export BUN_INSTALL="$HOME/.bun"' >> "$HOME/.bashrc"
-        echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> "$HOME/.bashrc"
-    fi
+# Load the homebrew environment so the current shell can find bun.
+BREW_ENV="/home/linuxbrew/.linuxbrew/bin/brew"
+if [[ -x "$BREW_ENV" ]]; then
+    eval "$($BREW_ENV shellenv)"
 fi
 
-# Add to .zshrc if it exists
-if [ -f "$HOME/.zshrc" ]; then
-    if ! grep -q 'export BUN_INSTALL="$HOME/.bun"' "$HOME/.zshrc"; then
-        echo 'export BUN_INSTALL="$HOME/.bun"' >> "$HOME/.zshrc"
-        echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> "$HOME/.zshrc"
-    fi
-fi
+export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
 # Verify installation
 if command -v bun &> /dev/null; then
     echo "Bun installed successfully!"
     bun --version
 else
-    echo "Warning: Bun binary not found on PATH"
+    echo "Warning: Bun binary not found on PATH" >&2
 fi

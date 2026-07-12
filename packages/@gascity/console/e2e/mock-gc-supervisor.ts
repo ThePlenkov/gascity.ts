@@ -447,17 +447,17 @@ async function handleGetCitySessionsList(req: IncomingMessage, res: ServerRespon
  * path; in production `GC_BIN` defaults to a real `gc` on PATH.
  */
 async function writeGcShim(): Promise<string> {
-    const { writeFileSync, mkdirSync, chmodSync } = await import('node:fs')
+    const { writeFileSync, mkdirSync, chmodSync, mkdtempSync } = await import('node:fs')
     const { join } = await import('node:path')
-    // Mirror the bash convention `${TMPDIR:-/tmp}` exactly: an empty
-    // TMPDIR string is treated the same as an unset TMPDIR and
-    // resolves to `/tmp`. Using `??` would treat `''` as a real path
-    // prefix, producing `/mock-gc-bin` instead of `/tmp/mock-gc-bin`
-    // and silently desyncing from the wrapper script's path lookup.
-    // Use TMPDIR for the mock gc bin path to respect environment configuration
-    const tmpRoot = process.env.TMPDIR || '/tmp'
-    const dir = join(tmpRoot, 'mock-gc-bin')
-    // Ensure directory is safely writable - use 0o700 for user-only access
+    const { tmpdir } = await import('node:os')
+
+    // If the wrapper pre-created a secure directory for the shim, use it.
+    // Otherwise create a fresh, mode-0o700 temp directory with a random name
+    // so we never reuse a world-writable /tmp path that an attacker could
+    // pre-create.
+    const dir = process.env.MOCK_GC_SHIM_DIR
+        ? process.env.MOCK_GC_SHIM_DIR
+        : mkdtempSync(join(tmpdir(), 'mock-gc-bin-'))
     mkdirSync(dir, { recursive: true, mode: 0o700 })
     const binPath = `${dir}/gc`
     const script = `#!/usr/bin/env bash

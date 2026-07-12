@@ -17,8 +17,8 @@ echo "Installing Playwright system dependencies (browsers: ${BROWSERS}, method: 
 if command -v npx >/dev/null 2>&1; then
     npx playwright install-deps ${BROWSERS}
 else
-    echo "ERROR: npx not found. Node.js must be installed before this feature runs."
-    echo "Ensure 'ghcr.io/devcontainers/features/node' is listed in 'installsAfter' in devcontainer-feature.json"
+    echo "ERROR: npx not found. Node.js must be installed before this feature runs." >&2
+    echo "Ensure 'ghcr.io/devcontainers/features/node' is listed in 'installsAfter' in devcontainer-feature.json" >&2
     exit 1
 fi
 

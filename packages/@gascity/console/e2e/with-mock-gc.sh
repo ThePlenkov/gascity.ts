@@ -26,6 +26,12 @@ E2E_PORT="${E2E_PORT:-3100}"
 LOG="${TMPDIR:-/tmp}/mock-gc-supervisor.log"
 echo "[with-mock-gc] starting mock-gc on :${MOCK_GC_PORT} (log=${LOG})" >&2
 
+# Create a secure, random temp directory for the gc shim. The mock will
+# write the shim here; the 0o700 mode ensures only the owner can access it.
+MOCK_GC_SHIM_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mock-gc-bin.XXXXXX")
+chmod 700 "${MOCK_GC_SHIM_DIR}"
+export MOCK_GC_SHIM_DIR
+
 ALLOW_GC_MOCK=1 MOCK_GC_PORT="${MOCK_GC_PORT}" bun e2e/mock-gc-supervisor.ts >"${LOG}" 2>&1 &
 MOCK_PID=$!
 
@@ -73,17 +79,15 @@ fi
 
 echo "[with-mock-gc] mock-gc ready; starting vite on :${E2E_PORT} pointed at ${GC_API_BASE_URL}" >&2
 
-# Wait for the gc shim to be written by the mock (it announces the
-# path on startup). We then point GC_BIN at it so the console's
-# supervisor server functions (which spawn `gc start|stop|restart`)
-# drive the mock via the shim instead of failing on ENOENT.
-SHIM=""
+# Wait for the gc shim to be written by the mock. The mock uses the
+# pre-created secure directory in MOCK_GC_SHIM_DIR so we can point
+# GC_BIN at it without exposing a world-writable /tmp directory.
+SHIM="${MOCK_GC_SHIM_DIR}/gc"
 for _ in $(seq 1 50); do
-  SHIM_CAND="${TMPDIR:-/tmp}/mock-gc-bin/gc"
-  if [[ -x "${SHIM_CAND}" ]]; then SHIM="${SHIM_CAND}"; break; fi
+  if [[ -x "${SHIM}" ]]; then break; fi
   sleep 0.1
 done
-if [[ -z "${SHIM}" ]]; then
+if [[ ! -x "${SHIM}" ]]; then
   echo "[with-mock-gc] mock-gc gc shim never appeared" >&2
   exit 1
 fi
@@ -92,7 +96,7 @@ echo "[with-mock-gc] using mock gc shim at ${SHIM}" >&2
 # Export so Vite's dev process picks them up.
 export GC_API_BASE_URL
 export GC_BIN="${SHIM}"
-export PATH="${TMPDIR:-/tmp}/mock-gc-bin:${PATH}"
+export PATH="${MOCK_GC_SHIM_DIR}:${PATH}"
 # Run Vite in the foreground (no `exec`) so this shell stays alive as
 # the parent of both processes — the cleanup trap above depends on it.
 bun x vite --port "${E2E_PORT}" --strictPort &
