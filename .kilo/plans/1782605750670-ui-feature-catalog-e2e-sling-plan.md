@@ -47,26 +47,29 @@ Net: **2 stubs to fix** (`gcSling`, `gcCloseBead`); 13 surfaces already real. Th
 
 File: `packages/@gascity/console/src/lib/gc.functions.ts:1809`. The current handler returns `{ ok: true, output: "Sling task to X executed", bead_id: undefined }` — a pure stub.
 
-Replace with real `gc sling` invocation. Pattern to mirror: `gcSupervisorStart` (line 1534) which already spawns `gc` via `GC_BIN` resolution at line 1261, with allow-listed args and minimal env.
+> **Status: implemented.** This section is kept as historical context. The
+> notes below have been reconciled with the shipped `gcSling` handler so a
+> future implementer does not re-derive a divergent (and less capable) shape.
+> Do **not** re-add a second validation layer or drop `--json`.
 
-Implementation steps:
-1. Resolve the `gc` binary the same way supervisor lifecycle does (`GC_BIN` env → `PATH`). Reuse the existing helper rather than re-deriving it.
-2. Validate `agent` against `^[a-zA-Z0-9._/-]+$` (matches the bead-id / rig-name chars used elsewhere in this file).
-3. Build argv as `["sling", agent, text]`. Pass via `spawn(bin, argv, { env: minimalEnv })` — no shell, so no injection.
-4. Capture stdout + stderr, timeout 30s using the existing `REQUEST_TIMEOUT_MS` constant.
-5. Parse bead id from stdout in this priority order — final form comes from DeepWiki Phase 0:
-   - `Created\s+(gd-[a-z0-9]+)`
-   - `Slung\s+(gd-[a-z0-9]+)`
-   - `bd-(?:[a-z0-9]+)` (alt prefix used by some upstream versions)
-   - Generic fallback: `gd-[a-z0-9]+`
-6. Return `{ ok, output, bead_id, error }`. On non-zero exit, `ok: false`, `error` = stderr, `output` = stdout for diagnostics.
-7. Strip the bead id from `output` before returning so the UI status line stays tidy (the UI already shows the id separately).
+Replace with real `gc sling` invocation. Pattern mirrored: `gcSupervisorStart`, which spawns `gc` through the shared `runGc` helper (`GC_BIN` env → `PATH` resolution) with allow-listed args and a minimal env.
 
-Unit test: `packages/@gascity/console/tests/unit/gc-sling.test.ts` — fake `gc` script on PATH covers all four output formats + exit-1.
+As-shipped shape (`gcSling` in `gc.functions.ts`):
+1. `gc` binary resolution is delegated to the existing `runGc` helper — not re-derived here.
+2. `agent` is validated against `^[a-zA-Z0-9._/-]+$`; on mismatch the handler returns `{ ok: false, output: 'sling rejected …', bead_id: undefined }` without spawning.
+3. argv is `["sling", "--json", agent, text]`. `--json` requests `gc`'s stable machine-readable dispatch envelope; it is required, not optional.
+4. `runGc` captures stdout + stderr with `timeoutMs: REQUEST_TIMEOUT_MS`.
+5. Bead-id parsing lives in the exported `parseSlingOutput` helper. It tries the `--json` envelope first (`bead_id`, `bead.id`, `beads[0].id`, `result.bead_id`), then falls back — for older `gc` builds without `--json` — to marker-anchored regex (`Created` / `Slung` / `Started workflow` / `Attached wisp` + next token) and finally a generic `<prefix>-<3..8 alphanumeric>` match. Prefixes are per-rig (e.g. `BL-42`, `FE-1`), not a fixed `gd-`/`bd-`.
+6. Returns `{ ok, output, bead_id }`. On non-zero exit, `ok: false` and `output` carries `gc sling failed (exit=…): <detail>` for diagnostics.
+7. The UI shows the bead id separately, so `output` stays the status line.
+
+Unit test: `packages/@gascity/console/tests/unit/gc-sling.test.ts` — covers the JSON envelope shapes, the regex fallbacks, and non-zero exit via a fake `gc` on PATH.
 
 ## Phase 3 — Fix `gcCloseBead` stub
 
-File: `packages/@gascity/console/src/lib/gc.functions.ts:1847`. Same pattern as Phase 2 but argv `["bead", "close", id]`. Validate `id` against `^gd-[a-z0-9]+$`. Timeout 15s. Unit test `packages/@gascity/console/tests/unit/gc-close-bead.test.ts`.
+> **Status: implemented.**
+
+File: `packages/@gascity/console/src/lib/gc.functions.ts` (`gcCloseBead`). Same `runGc` pattern as Phase 2 with argv `["bead", "close", id]`. `id` is validated against the shared `BEAD_ID_RE` (`/^[A-Za-z0-9][A-Za-z0-9_./-]*-[A-Za-z0-9]+$/`) so per-rig prefixes work — **not** a `gd-`-only pattern. Unit test `packages/@gascity/console/tests/unit/gc-close-bead.test.ts`.
 
 ## Phase 4 — Test rig agent = Kilo
 

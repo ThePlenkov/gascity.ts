@@ -1,3 +1,17 @@
+---
+# Codacy configuration.
+#
+# The `---` document-start marker is required: without it Codacy silently
+# ignores this file, so none of the settings below take effect.
+#
+# `exclude_paths` is intentionally pinned to two individual files (never a
+# directory or glob) so the rest of the tree stays under full security
+# scanning. Each entry documents the specific, reviewed false positive it
+# suppresses:
 exclude_paths:
-  - .devcontainer/features/homebrew/install.sh  # Official Homebrew installer
-  - packages/@gascity/console/src/lib/gc.functions.ts  # URL from trusted TOML config
+  # Pipes the *official* Homebrew installer over curl. This is the vendor's
+  # documented install path, not attacker-controlled input.
+  - .devcontainer/features/homebrew/install.sh
+  # Fetches the supervisor status URL, which is resolved from trusted local
+  # TOML config (never a request/user-supplied value) — see resolveSupervisorUrl.
+  - packages/@gascity/console/src/lib/gc.functions.ts
