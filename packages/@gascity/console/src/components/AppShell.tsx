@@ -278,6 +278,14 @@ function SupervisorPopover({
   const [logClearedAt, setLogClearedAt] = useState<number | null>(null);
   const logRef = useRef<HTMLPreElement>(null);
 
+  const refetchInterval = getRefetchInterval(logPaused, transition);
+
+  const { data: log } = useQuery({
+    queryKey: ["gc", "supervisor-logs"],
+    queryFn: () => logs({ data: { lines: 200 } }),
+    refetchInterval,
+  });
+
   const displayLog = getDisplayLog(log?.output, logClearedAt);
 
   useEffect(() => {
@@ -300,14 +308,6 @@ function SupervisorPopover({
       setTransition(null);
     }
   }, [transition, health?.reachable]);
-
-  const refetchInterval = getRefetchInterval(logPaused, transition);
-
-  const { data: log } = useQuery({
-    queryKey: ["gc", "supervisor-logs"],
-    queryFn: () => logs({ data: { lines: 200 } }),
-    refetchInterval,
-  });
 
   // Supervisor lifecycle phase. Only two steady states — `down`
   // (supervisor not reachable) and `up` (supervisor reachable, no
@@ -772,6 +772,7 @@ function SlingDrawer({
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
         role="dialog" // NOSONAR: using div with role is acceptable for React portals
         aria-modal="true"
+        aria-label="sling task"
       >
         <SlingComposer onDone={() => onOpenChange(false)} />
       </div>

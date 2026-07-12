@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 
 import { AppShell } from "@/components/AppShell";
@@ -205,6 +205,42 @@ function InitCityDialog({
     });
   }
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Restore focus to whatever was focused before the dialog opened, so
+  // dismissing it doesn't strand the keyboard user at the top of the page.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    return () => previouslyFocused?.focus?.();
+  }, []);
+
+  function handleDialogKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    // Keep the backdrop's click/keydown handlers from firing, but still act
+    // on Escape here — otherwise blanket stopPropagation swallowed Escape and
+    // the dialog could not be dismissed from the keyboard.
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    // Contain Tab focus within the dialog.
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusables || focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 pt-[8vh]"
@@ -219,14 +255,12 @@ function InitCityDialog({
       aria-label="Close dialog"
     >
       <div
+        ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={handleDialogKeyDown}
         role="dialog"
         aria-modal="true"
         aria-label="new city dialog"
-        // Focus trap and background inerting for full keyboard accessibility are
-        // intentionally not implemented in this minimal dialog; revisit when a11y
-        // audit is scheduled.
         className="w-full max-w-xl overflow-hidden rounded-md border border-border bg-card"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2.5">

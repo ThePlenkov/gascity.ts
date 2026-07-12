@@ -76,46 +76,48 @@ function OrdersPage() {
                 return (
                   <li
                     key={o.name}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setSelected(o.name)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelected(o.name);
-                      }
-                    }}
                     className={clsx(
-                      "grid cursor-pointer grid-cols-[1fr_70px_80px_90px_auto] items-center gap-3 border-b border-border px-6 py-2.5 w-full text-left",
+                      "grid grid-cols-[1fr_70px_80px_90px_auto] items-center gap-3 border-b border-border px-6 py-2.5 w-full",
                       active ? "bg-muted" : "hover:bg-muted/40",
                     )}
                   >
-                    <div className="min-w-0">
-                      <div className="truncate font-mono text-sm text-foreground">
-                        {o.name}
-                        {o.due && (
-                          <span className="ml-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                            <span className="live-dot inline-block h-1.5 w-1.5 rounded-full" />
-                            due
-                          </span>
-                        )}
-                        {" "}
-                      </div>
-                      {o.description && (
-                        <div className="truncate font-mono text-[11px] text-muted-foreground">
-                          {o.description}
+                    {/* The selectable region is a sibling of the action
+                        buttons, not their wrapper, so Space/Enter on a nested
+                        button activates that button natively instead of being
+                        swallowed by a row-level handler. */}
+                    <button
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setSelected(o.name)}
+                      className="col-span-4 grid grid-cols-subgrid items-center gap-3 cursor-pointer text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-sm text-foreground">
+                          {o.name}
+                          {o.due && (
+                            <span className="ml-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                              <span className="live-dot inline-block h-1.5 w-1.5 rounded-full" />
+                              due
+                            </span>
+                          )}
+                          {" "}
                         </div>
-                      )}
-                    </div>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {o.type}
-                    </span>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {o.trigger}
-                    </span>
-                    <span className="font-mono text-[11px] text-muted-foreground">
-                      {o.interval ?? o.schedule ?? o.on ?? "—"}
-                    </span>
+                        {o.description && (
+                          <div className="truncate font-mono text-[11px] text-muted-foreground">
+                            {o.description}
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {o.type}
+                      </span>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {o.trigger}
+                      </span>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {o.interval ?? o.schedule ?? o.on ?? "—"}
+                      </span>
+                    </button>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() =>
