@@ -143,10 +143,9 @@ export function isTmuxAvailable(tmuxBin = "tmux"): boolean {
       env: { PATH: "/usr/local/bin:/usr/bin:/bin" },
     });
     const available = !res.error && res.status === 0;
-    tmuxAvailableCache.set(tmuxBin, available);
+    if (available) tmuxAvailableCache.set(tmuxBin, available);
     return available;
   } catch {
-    tmuxAvailableCache.set(tmuxBin, false);
     return false;
   }
 }
