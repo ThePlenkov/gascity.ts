@@ -84,7 +84,7 @@ const SAFE_ENV: Record<string, string> = {
   TERM: "xterm-256color",
   COLORTERM: "truecolor",
   HOME: process.env.HOME ?? "/tmp",
-  PATH: process.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+  PATH: "/usr/local/bin:/usr/bin:/bin",
   LANG: process.env.LANG ?? "C.UTF-8",
   LC_ALL: process.env.LC_ALL ?? "C.UTF-8",
   // tmux uses these to render — see `man tmux`.
@@ -129,7 +129,11 @@ export async function loadPty(): Promise<IPtyModule> {
  */
 export function isTmuxAvailable(tmuxBin = "tmux"): boolean {
   try {
-    const res = spawnSync(tmuxBin, ["-V"], { stdio: "ignore", timeout: 2000 });
+    const res = spawnSync(tmuxBin, ["-V"], {
+      stdio: "ignore",
+      timeout: 2000,
+      env: { ...process.env, PATH: "/usr/local/bin:/usr/bin:/bin" },
+    });
     return !res.error && res.status === 0;
   } catch {
     return false;
