@@ -124,18 +124,29 @@ export async function loadPty(): Promise<IPtyModule> {
  * reports "unavailable" during feature detection instead of accepting a
  * WebSocket that then fails asynchronously.
  *
+ * Results are cached per binary path so repeated probe requests don't
+ * re-spawn a synchronous process (which would block the event loop).
+ *
  * The caller MUST validate `tmuxBin` against a strict allow-list before
  * passing it here (this only ever runs in local dev, never production).
  */
+const tmuxAvailableCache = new Map<string, boolean>();
+
 export function isTmuxAvailable(tmuxBin = "tmux"): boolean {
+  const cached = tmuxAvailableCache.get(tmuxBin);
+  if (cached !== undefined) return cached;
+
   try {
     const res = spawnSync(tmuxBin, ["-V"], {
       stdio: "ignore",
       timeout: 2000,
       env: { PATH: "/usr/local/bin:/usr/bin:/bin" },
     });
-    return !res.error && res.status === 0;
+    const available = !res.error && res.status === 0;
+    tmuxAvailableCache.set(tmuxBin, available);
+    return available;
   } catch {
+    tmuxAvailableCache.set(tmuxBin, false);
     return false;
   }
 }
