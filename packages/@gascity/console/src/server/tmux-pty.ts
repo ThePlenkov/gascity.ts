@@ -132,7 +132,7 @@ export function isTmuxAvailable(tmuxBin = "tmux"): boolean {
     const res = spawnSync(tmuxBin, ["-V"], {
       stdio: "ignore",
       timeout: 2000,
-      env: { ...process.env, PATH: "/usr/local/bin:/usr/bin:/bin" },
+      env: { PATH: "/usr/local/bin:/usr/bin:/bin" },
     });
     return !res.error && res.status === 0;
   } catch {
